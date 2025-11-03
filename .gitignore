@@ -18,7 +18,6 @@ output-metadata.json
 
 # IntelliJ
 *.iml
-.idea/
 misc.xml
 deploymentTargetDropDown.xml
 render.experimental.xml
@@ -32,3 +31,7 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Carpetas locales de IDE
+.idea/
+.gradle/
