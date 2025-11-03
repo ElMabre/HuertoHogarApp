@@ -30,12 +30,9 @@ import com.huertohogar.app.model.CartItem
 import com.huertohogar.app.model.CartUiState
 import com.huertohogar.app.viewmodel.CartViewModel
 import java.util.Locale
-
-// Definimos el Locale para Chile (CLP) de la forma moderna
-// para no usar el constructor obsoleto.
 private val chileLocale: Locale = Locale.forLanguageTag("es-CL")
 
-@SuppressLint("DefaultLocale") // Necesario por si algún String.format se nos pasa
+@SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
@@ -100,7 +97,7 @@ fun CartScreen(
                     items(cartUiState.items, key = { it.producto.id }) { cartItem ->
                         CartListItem(
                             cartItem = cartItem,
-                            // Ahora sí usamos onQuantityChange
+                    
                             onQuantityChange = { newQuantity ->
                                 cartViewModel.updateQuantity(cartItem.producto.id, newQuantity)
                             },
@@ -147,7 +144,7 @@ fun CartScreen(
 @Composable
 private fun CartListItem(
     cartItem: CartItem,
-    onQuantityChange: (Int) -> Unit, // ¡ARREGLO ERROR 2! Ahora se usa
+    onQuantityChange: (Int) -> Unit, 
     onRemoveClick: () -> Unit
 ) {
     Row(
@@ -199,7 +196,7 @@ private fun CartListItem(
                 Icon(Icons.Default.Delete, contentDescription = "Eliminar item", tint = MaterialTheme.colorScheme.error)
             }
 
-            // ¡ARREGLO ERROR 2!
+            
             // Implementamos los botones de +/-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Botón de Restar

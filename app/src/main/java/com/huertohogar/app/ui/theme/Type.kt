@@ -8,22 +8,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.huertohogar.app.R
 
-/**
- * Aquí definimos la familia de fuentes "Montserrat".
- * Una familia de fuentes agrupa diferentes grosores (pesos) de la misma letra.
- * En este caso, estamos usando una fuente variable, lo que significa que el mismo
- * archivo de fuente (montserrat_variable.ttf) puede mostrar diferentes grosores.
- */
 val Montserrat = FontFamily(
     Font(R.font.montserrat_variable, FontWeight.Normal),
     Font(R.font.montserrat_variable, FontWeight.SemiBold),
     Font(R.font.montserrat_variable, FontWeight.Bold)
 )
-
-/**
- * Hacemos lo mismo para la familia de fuentes "Playfair Display".
- * Esta se usará probablemente para los títulos, por su estilo más elegante.
- */
 val PlayfairDisplay = FontFamily(
     Font(R.font.playfair_display_variable, FontWeight.Normal),
     Font(R.font.playfair_display_variable, FontWeight.Bold)

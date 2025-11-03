@@ -1,12 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    // Quitamos la referencia explícita al plugin de compose aquí si no se usa en otro lado
-    // alias(libs.plugins.kotlin.compose) //<- Comentado o eliminado si no se necesita explícitamente
-    // Asegúrate que el plugin de compose se aplica de otra forma si es necesario,
-    // a menudo viene implícito con el kotlin-android plugin o configuraciones específicas.
-    // O si usas 'org.jetbrains.kotlin.plugin.compose', añádelo así:
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" // Asegúrate que la versión coincida con tu Kotlin
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" 
 }
 
 android {

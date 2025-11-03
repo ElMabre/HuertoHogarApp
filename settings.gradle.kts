@@ -27,16 +27,14 @@ pluginManagement {
 
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
-    // Mantiene el modo estricto, pero ahora el repo de GitHub está permitido globalmente
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        // Repositorio GitHub Packages para dependencias privadas
+    
         maven {
             url = uri("https://maven.pkg.github.com/ElMabre/HuertoHogarApp")
-            
-            // Se repite la misma lógica aquí para las dependencias del proyecto
+        
             if (extra.has("gpr.user") && extra.has("gpr.key")) {
                 credentials {
                     username = extra["gpr.user"] as String

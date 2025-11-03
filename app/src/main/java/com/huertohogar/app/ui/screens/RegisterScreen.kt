@@ -220,7 +220,7 @@ private fun RegisterForm(
 
         TextButton(
             onClick = onLoginClick,
-            enabled = isEnabled // Deshabilitamos si está cargando
+            enabled = isEnabled /
         ) {
             Text("¿Ya tienes una cuenta? Inicia Sesión")
         }
