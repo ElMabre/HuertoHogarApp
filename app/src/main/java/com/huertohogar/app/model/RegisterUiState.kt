@@ -1,19 +1,8 @@
 package com.huertohogar.app.model
 
 /**
- * Representa el estado completo del formulario de registro en un momento dado.
- * Contiene el valor de cada campo y los posibles errores de validación.
- *
- * @param nombre El nombre ingresado por el usuario.
- * @param apellido El apellido ingresado por el usuario.
- * @param run El RUN ingresado por el usuario.
- * @param email El correo electrónico ingresado.
- * @param password La contraseña ingresada.
- * @param confirmPassword La confirmación de la contraseña.
- * @param aceptaTerminos Si el usuario aceptó los términos y condiciones.
- * @param passwordVisible Controla si la contraseña es visible o no.
- * @param errors Un objeto que contiene los mensajes de error para cada campo.
- * @param isLoading Indica si se está procesando el registro (para mostrar un loader).
+ * Estado de la UI para la pantalla de Registro.
+ * Contiene los valores de los campos y el estado de carga/error.
  */
 data class RegisterUiState(
     val nombre: String = "",
@@ -22,16 +11,25 @@ data class RegisterUiState(
     val email: String = "",
     val password: String = "",
     val confirmPassword: String = "",
+
+    // --- Nuevos Campos ---
+    val region: String = "",
+    val comuna: String = "",
+    val direccion: String = "",
+
     val aceptaTerminos: Boolean = false,
     val passwordVisible: Boolean = false,
     val confirmPasswordVisible: Boolean = false,
+    val isLoading: Boolean = false,
+
     val errors: RegisterErrorState = RegisterErrorState(),
-    val isLoading: Boolean = false // Estado para la animación de carga
+
+    // Campo para el mensaje de error general (rojo) en la parte superior
+    val registerErrorGlobal: String? = null
 )
 
 /**
- * Contiene los posibles mensajes de error para cada campo validable del formulario de registro.
- * Un valor 'null' significa que no hay error en ese campo.
+ * Estado de errores de validación para el formulario de registro.
  */
 data class RegisterErrorState(
     val nombre: String? = null,
@@ -40,5 +38,21 @@ data class RegisterErrorState(
     val email: String? = null,
     val password: String? = null,
     val confirmPassword: String? = null,
+
+    // --- Errores para Nuevos Campos ---
+    val region: String? = null,
+    val comuna: String? = null,
+    val direccion: String? = null,
+
     val aceptaTerminos: String? = null
-)
+) {
+    /**
+     * Función auxiliar para verificar rápidamente si el formulario es válido.
+     * Retorna true si todos los campos de error son nulos.
+     */
+    fun hasNoErrors(): Boolean {
+        return nombre == null && apellido == null && run == null && email == null &&
+                password == null && confirmPassword == null && region == null &&
+                comuna == null && direccion == null && aceptaTerminos == null
+    }
+}

@@ -10,28 +10,20 @@ import androidx.navigation.navArgument
 import com.huertohogar.app.ui.screens.CartScreen
 import com.huertohogar.app.ui.screens.HomeScreen
 import com.huertohogar.app.ui.screens.LoginScreen
+import com.huertohogar.app.ui.screens.MapScreen // Importamos MapScreen
 import com.huertohogar.app.ui.screens.ProductDetailScreen
 import com.huertohogar.app.ui.screens.ProductsScreen
-import com.huertohogar.app.ui.screens.ProfileScreen // Importamos la nueva pantalla
+import com.huertohogar.app.ui.screens.ProfileScreen
 import com.huertohogar.app.ui.screens.RegisterScreen
 import com.huertohogar.app.viewmodel.CartViewModel
-import com.huertohogar.app.viewmodel.ProfileViewModel // Importamos el ProfileViewModel
+import com.huertohogar.app.viewmodel.ProfileViewModel
 
-/**
- * Composable que define el grafo de navegación principal de la aplicación.
- * Gestiona qué pantalla se muestra en cada momento.
- */
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    // Creamos la instancia única del CartViewModel aquí
+    // ViewModels compartidos o de alcance global para la navegación
     val cartViewModel: CartViewModel = viewModel()
-
-    // Creamos la instancia única del ProfileViewModel aquí.
-    // Al crearlo aquí (fuera del NavHost), su 'vida' (scope)
-    // se ata al 'AppNavigation' y no se destruirá
-    // al cambiar de pantalla.
     val profileViewModel: ProfileViewModel = viewModel()
 
     NavHost(
@@ -48,11 +40,10 @@ fun AppNavigation() {
 
         // --- Pantallas Principales ---
         composable(route = AppScreens.HomeScreen.route) {
-            // Le pasamos también el profileViewModel a la HomeScreen
             HomeScreen(
                 navController = navController,
                 cartViewModel = cartViewModel,
-                profileViewModel = profileViewModel // Se lo pasamos aquí
+                profileViewModel = profileViewModel
             )
         }
         composable(route = AppScreens.ProductsScreen.route) {
@@ -72,16 +63,16 @@ fun AppNavigation() {
         composable(route = AppScreens.CartScreen.route) {
             CartScreen(navController = navController, cartViewModel = cartViewModel)
         }
-
-        // *** Define la pantalla para la ruta del Perfil ***
         composable(route = AppScreens.ProfileScreen.route) {
-            // Le pasamos la instancia COMPARTIDA de profileViewModel
-            // que creamos arriba.
             ProfileScreen(
                 navController = navController,
                 profileViewModel = profileViewModel
             )
         }
+
+        // --- Nueva Pantalla de Mapa ---
+        composable(route = AppScreens.MapScreen.route) {
+            MapScreen(navController = navController)
+        }
     }
 }
-

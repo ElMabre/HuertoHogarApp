@@ -1,24 +1,19 @@
 package com.huertohogar.app.model
 
 /**
- *
- * @param email El correo electrónico ingresado por el usuario.
- * @param password La contraseña ingresada.
- * @param passwordVisible Controla si la contraseña es visible o no.
- * @param errors Un objeto que contiene los mensajes de error para cada campo.
- * @param isLoading Indica si se está procesando el login (para mostrar un loader).
+ * Estado de la UI para la pantalla de Login.
  */
 data class LoginUiState(
     val email: String = "",
     val password: String = "",
     val passwordVisible: Boolean = false,
+    val isLoading: Boolean = false,
     val errors: LoginErrorState = LoginErrorState(),
-    val isLoading: Boolean = false // Estado para la animación de carga
+    val loginError: String? = null // <--- ¡ESTO FALTABA!
 )
 
 /**
- * Contiene los posibles mensajes de error para cada campo del formulario de login.
- * Un valor 'null' significa que no hay error.
+ * Estado de errores de validación de campos individuales.
  */
 data class LoginErrorState(
     val email: String? = null,

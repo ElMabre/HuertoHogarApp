@@ -3,9 +3,10 @@ package com.huertohogar.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape // Importado para la foto
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Map // Importamos el icono del Mapa
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -13,20 +14,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip // Importado para la foto
-import androidx.compose.ui.layout.ContentScale // Importado para la foto
-import androidx.compose.ui.platform.LocalContext // Importado para la foto
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage // Importado para la foto
-import coil.request.ImageRequest // Importado para la foto
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.huertohogar.app.navigation.AppScreens
 import com.huertohogar.app.ui.components.ProductCard
 import com.huertohogar.app.viewmodel.CartViewModel
 import com.huertohogar.app.viewmodel.HomeViewModel
-import com.huertohogar.app.viewmodel.ProfileViewModel // Importamos el ProfileViewModel
+import com.huertohogar.app.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,12 +35,10 @@ fun HomeScreen(
     navController: NavController,
     homeViewModel: HomeViewModel = viewModel(),
     cartViewModel: CartViewModel,
-    profileViewModel: ProfileViewModel // Recibimos el ViewModel compartido
+    profileViewModel: ProfileViewModel
 ) {
     val homeUiState by homeViewModel.uiState.collectAsState()
     val cartUiState by cartViewModel.uiState.collectAsState()
-
-    // Leemos el estado del ProfileViewModel
     val profileUiState by profileViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -53,7 +52,6 @@ fun HomeScreen(
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 actions = {
-                    // Ícono del Carrito (sin cambios)
                     IconButton(onClick = { navController.navigate(AppScreens.CartScreen.route) }) {
                         BadgedBox(
                             badge = {
@@ -66,20 +64,13 @@ fun HomeScreen(
                         }
                     }
 
-                    // --- Ícono de Perfil (MODIFICADO) ---
                     IconButton(onClick = { navController.navigate(AppScreens.ProfileScreen.route) }) {
-
-                        // Si la URI de la imagen en el profileUiState NO es nula,
-                        // mostramos la imagen. Si ES nula, mostramos el ícono de siempre.
-
                         if (profileUiState.profileImageUri == null) {
-                            // No hay imagen, mostramos el ícono por defecto
                             Icon(
                                 imageVector = Icons.Filled.AccountCircle,
                                 contentDescription = "Mi Perfil"
                             )
                         } else {
-                            // ¡Hay imagen! La mostramos con Coil
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
                                     .data(profileUiState.profileImageUri)
@@ -87,9 +78,9 @@ fun HomeScreen(
                                     .build(),
                                 contentDescription = "Mi Perfil",
                                 modifier = Modifier
-                                    .size(32.dp) // Un tamaño bueno para la barra
-                                    .clip(CircleShape), // La hacemos redondita
-                                contentScale = ContentScale.Crop // Recortamos para que encaje
+                                    .size(32.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
                             )
                         }
                     }
@@ -136,7 +127,11 @@ fun HomeScreen(
                     )
                 }
             }
+
+            // Empuja el contenido hacia abajo
             Spacer(modifier = Modifier.weight(1f))
+
+            // Botón 1: Ver Productos
             Button(
                 onClick = { navController.navigate(AppScreens.ProductsScreen.route) },
                 modifier = Modifier
@@ -144,6 +139,19 @@ fun HomeScreen(
                     .height(48.dp)
             ) {
                 Text("Ver Todos los Productos")
+            }
+
+            // Botón 2: Ver Mapa (NUEVO)
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = { navController.navigate(AppScreens.MapScreen.route) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Icon(imageVector = Icons.Filled.Map, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ver Nuestras Tiendas")
             }
         }
     }

@@ -38,7 +38,7 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
-        compose = true // Habilitamos Compose
+        compose = true
     }
     packaging {
         resources {
@@ -62,6 +62,16 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
     implementation(libs.androidx.datastore.preferences)
+
+    // Networking (Retrofit + OkHttp)
+    implementation(libs.squareup.retrofit)
+    implementation(libs.squareup.converter.gson)
+    implementation(libs.squareup.okhttp)
+
+    // Google Maps
+    implementation(libs.google.maps.compose)
+    implementation(libs.google.play.services.maps)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

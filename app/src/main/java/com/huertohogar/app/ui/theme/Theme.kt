@@ -1,68 +1,92 @@
 package com.huertohogar.app.ui.theme
 
-// Mantenemos los imports necesarios
+import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-// Las definiciones de LightColorScheme y DarkColorScheme siguen igual...
-private val LightColorScheme = lightColorScheme(
-    primary = VerdeEsmeralda,
-    onPrimary = Color.White,
-    secondary = AmarilloMostaza,
-    onSecondary = GrisOscuro,
-    tertiary = MarronClaro,
-    background = FondoBlanco,
-    onBackground = GrisOscuro,
-    surface = FondoTarjetas,
-    onSurface = GrisOscuro,
-    error = Error,
-    onError = Color.White
+// Esquema de colores para Modo Oscuro
+private val DarkColorScheme = darkColorScheme(
+    primary = Primary,
+    onPrimary = OnPrimary,
+    primaryContainer = PrimaryContainer,
+    onPrimaryContainer = OnPrimaryContainer,
+    secondary = Secondary,
+    onSecondary = OnSecondary,
+    secondaryContainer = SecondaryContainer,
+    onSecondaryContainer = OnSecondaryContainer,
+    tertiary = Tertiary,
+    onTertiary = OnTertiary,
+    background = OnBackground,
+    onBackground = Background,
+    surface = OnSurface,
+    onSurface = Surface,
+    error = ErrorColor,
+    errorContainer = ErrorContainer,
+    onErrorContainer = OnErrorContainer
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = VerdeClaro,
-    onPrimary = Color.Black,
-    secondary = AmarilloMostaza,
-    onSecondary = GrisOscuro,
-    tertiary = MarronClaro,
-    background = GrisOscuro,
-    onBackground = Color.White,
-    surface = Color(0xFF222222),
-    onSurface = Color.White,
-    error = Error,
-    onError = Color.White
+// Esquema de colores para Modo Claro
+private val LightColorScheme = lightColorScheme(
+    primary = Primary,
+    onPrimary = OnPrimary,
+    primaryContainer = PrimaryContainer,
+    onPrimaryContainer = OnPrimaryContainer,
+    secondary = Secondary,
+    onSecondary = OnSecondary,
+    secondaryContainer = SecondaryContainer,
+    onSecondaryContainer = OnSecondaryContainer,
+    tertiary = Tertiary,
+    onTertiary = OnTertiary,
+    background = Background,
+    onBackground = OnBackground,
+    surface = Surface,
+    onSurface = OnSurface,
+    error = ErrorColor,
+    errorContainer = ErrorContainer,
+    onErrorContainer = OnErrorContainer
 )
 
 @Composable
 fun HuertoHogarAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    // Dynamic color is available on Android 12+
+    dynamicColor: Boolean = false, // Desactivado para mantener identidad de marca
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
 
-    // --- ¡ARREGLO! ---
-    // Quitamos TODO el bloque SideEffect que modificaba la statusBarColor.
-    // Con enableEdgeToEdge(), el sistema maneja la transparencia y los colores
-    // de forma más automática y moderna. El color de fondo detrás de la barra
-    // ahora será el 'background' o 'surface' del tema, dependiendo del Composable.
-    /*
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb() // <-- Ya no es necesario
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme // <-- Tampoco
+            window.statusBarColor = colorScheme.primary.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
-    */
 
+    // Aquí usamos la variable Typography definida en Type.kt
+    // Asegúrate de que Type.kt esté en el mismo paquete.
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = AppTypography,
+        typography = Typography,
         content = content
     )
 }

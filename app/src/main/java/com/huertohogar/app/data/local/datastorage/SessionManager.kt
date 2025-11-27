@@ -1,69 +1,80 @@
 package com.huertohogar.app.data.local.datastorage
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-// Extensión de Context para crear una instancia única de DataStore
-// con el nombre "user_session_prefs"
-private val Context.dataStore by preferencesDataStore(name = "user_session_prefs")
+// Extensión para crear el DataStore.
+// Al ponerlo aquí fuera de la clase, se asegura que sea único (Singleton) para el Contexto.
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_session")
 
-/**
- * Gestiona la persistencia de datos de la sesión del usuario (ej. email)
- * usando DataStore Preferences.
- *
- * @param context El contexto de la aplicación, necesario para inicializar DataStore.
- */
-class SessionManager(context: Context) {
+class SessionManager(private val context: Context) {
 
-    // Instancia de DataStore referenciada desde el contexto
-    private val dataStore = context.dataStore
-
-    // Creamos una clave (Key) para el email. Es como el "nombre" de la variable
-    // que guardaremos en DataStore.
     companion object {
-        private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
+        // Claves para guardar los datos
+        val USER_EMAIL_KEY = stringPreferencesKey("user_email")
+        val PROFILE_IMAGE_KEY = stringPreferencesKey("profile_image_uri")
     }
 
+    // --- EMAIL ---
+
     /**
-     * Guarda el email del usuario en DataStore de forma asíncrona.
-     * @param email El email a guardar.
+     * Guarda el email del usuario.
      */
     suspend fun saveUserEmail(email: String) {
-        // 'edit' es una función de suspensión (suspend fun) que nos permite
-        // modificar las preferencias de forma segura.
-        dataStore.edit { preferences ->
+        context.dataStore.edit { preferences ->
             preferences[USER_EMAIL_KEY] = email
         }
     }
 
     /**
-     * Obtiene el email del usuario como un Flow.
-     * Un Flow permite "observar" el dato, de modo que si cambia,
-     * la UI se actualiza automáticamente.
-     * @return Un Flow<String?> que emite el email guardado, o null si no hay ninguno.
+     * Flujo (Stream) que devuelve el email guardado.
+     * Si no hay nada, devuelve null.
      */
-    fun getUserEmail(): Flow<String?> {
-        // 'dataStore.data' es el Flow que emite las preferencias
-        // cada vez que cambian.
-        return dataStore.data
-            .map { preferences ->
-                // Leemos el valor asociado a nuestra clave USER_EMAIL_KEY
-                preferences[USER_EMAIL_KEY]
-            }
+    val userEmail: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[USER_EMAIL_KEY]
+        }
+
+    // --- IMAGEN DE PERFIL ---
+
+    /**
+     * Guarda la URI de la foto de perfil como String.
+     */
+    suspend fun saveProfileImage(uri: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PROFILE_IMAGE_KEY] = uri
+        }
     }
 
     /**
-     * Borra el email del usuario de DataStore.
-     * Esto se usará para el "Cerrar Sesión".
+     * Flujo que devuelve la URI de la foto.
+     */
+    val profileImage: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PROFILE_IMAGE_KEY]
+        }
+
+    // --- CERRAR SESIÓN ---
+
+    /**
+     * Borra todos los datos de la sesión (logout).
      */
     suspend fun clearUserEmail() {
-        dataStore.edit { preferences ->
-            // Simplemente removemos la clave de las preferencias
+        context.dataStore.edit { preferences ->
+            // remove() es el método correcto de MutablePreferences
             preferences.remove(USER_EMAIL_KEY)
+            preferences.remove(PROFILE_IMAGE_KEY)
         }
+    }
+
+    // Alias para limpiar todo (por compatibilidad si lo llamaste clearSession en otro lado)
+    suspend fun clearSession() {
+        clearUserEmail()
     }
 }

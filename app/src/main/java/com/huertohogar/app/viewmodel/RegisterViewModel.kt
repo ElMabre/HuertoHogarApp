@@ -1,9 +1,12 @@
 package com.huertohogar.app.viewmodel
 
 import android.app.Application
+import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.huertohogar.app.data.local.datastorage.SessionManager
+import com.huertohogar.app.data.remote.model.RegisterRequestDto
+import com.huertohogar.app.data.repository.AuthRepository
 import com.huertohogar.app.model.RegisterErrorState
 import com.huertohogar.app.model.RegisterUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,148 +14,105 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException // Importante para detectar códigos de error
 
-/**
- * ViewModel para la pantalla de Registro (RegisterScreen).
- * Contiene toda la lógica de negocio y el estado del formulario de registro.
- *
- * Hereda de 'AndroidViewModel' para tener acceso al 'application' context,
- * necesario para nuestro SessionManager.
- */
 class RegisterViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Creamos la instancia del SessionManager para poder guardar datos
     private val sessionManager = SessionManager(application)
+    private val authRepository = AuthRepository()
 
-    // _uiState es un flujo de datos mutable que contiene el estado actual del formulario.
-    // Es privado para que solo el ViewModel pueda modificarlo.
     private val _uiState = MutableStateFlow(RegisterUiState())
-
-    // uiState es la versión pública y de solo lectura de _uiState.
-    // La interfaz de usuario (la pantalla) observa este flujo para reaccionar a los cambios.
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
-    // --- Funciones de actualización de estado (con reseteo de isLoading) ---
+    // --- Inputs de Texto ---
+    fun onNombreChange(v: String) = updateState { it.copy(nombre = v, errors = it.errors.copy(nombre = null)) }
+    fun onApellidoChange(v: String) = updateState { it.copy(apellido = v, errors = it.errors.copy(apellido = null)) }
+    fun onRunChange(v: String) = updateState { it.copy(run = v, errors = it.errors.copy(run = null)) }
+    fun onEmailChange(v: String) = updateState { it.copy(email = v, errors = it.errors.copy(email = null)) }
+    fun onPasswordChange(v: String) = updateState { it.copy(password = v, errors = it.errors.copy(password = null)) }
+    fun onConfirmChange(v: String) = updateState { it.copy(confirmPassword = v, errors = it.errors.copy(confirmPassword = null)) }
+    fun onDireccionChange(v: String) = updateState { it.copy(direccion = v, errors = it.errors.copy(direccion = null)) }
 
-    fun onNombreChange(nombre: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                nombre = nombre,
-                errors = currentState.errors.copy(nombre = null),
-                isLoading = false
+    // --- Selectores ---
+    fun onRegionSelected(region: String) {
+        updateState {
+            it.copy(
+                region = region,
+                comuna = "", // Reseteamos comuna al cambiar región
+                errors = it.errors.copy(region = null)
             )
         }
     }
 
-    fun onApellidoChange(apellido: String) {
-        _uiState.update { it.copy(apellido = apellido, errors = it.errors.copy(apellido = null), isLoading = false) }
+    fun onComunaSelected(comuna: String) {
+        updateState { it.copy(comuna = comuna, errors = it.errors.copy(comuna = null)) }
     }
 
-    fun onRunChange(run: String) {
-        _uiState.update { it.copy(run = run, errors = it.errors.copy(run = null), isLoading = false) }
-    }
+    fun onAceptaTerminosChange(v: Boolean) = updateState { it.copy(aceptaTerminos = v, errors = it.errors.copy(aceptaTerminos = null)) }
 
-    fun onEmailChange(email: String) {
-        _uiState.update { it.copy(email = email, errors = it.errors.copy(email = null), isLoading = false) }
-    }
-
-    fun onPasswordChange(password: String) {
-        _uiState.update { it.copy(password = password, errors = it.errors.copy(password = null), isLoading = false) }
-    }
-
-    fun onConfirmPasswordChange(confirmPassword: String) {
-        _uiState.update { it.copy(confirmPassword = confirmPassword, errors = it.errors.copy(confirmPassword = null), isLoading = false) }
-    }
-
-    fun onAceptaTerminosChange(acepta: Boolean) {
-        _uiState.update { it.copy(aceptaTerminos = acepta, errors = it.errors.copy(aceptaTerminos = null), isLoading = false) }
-    }
-
-    // --- Fin funciones de actualización ---
-
-    fun onTogglePasswordVisibility() {
-        _uiState.update { it.copy(passwordVisible = !it.passwordVisible) }
-    }
-
-    fun onToggleConfirmPasswordVisibility() {
-        _uiState.update { it.copy(confirmPasswordVisible = !it.confirmPasswordVisible) }
-    }
-
-    /**
-     * Función principal que se llama desde la UI al pulsar "Crear Cuenta".
-     * Gestiona el estado de carga y la navegación.
-     * @param onRegisterSuccess Lambda que la UI pasa para ser llamada
-     * cuando el registro sea exitoso.
-     */
-    fun onRegisterClicked(onRegisterSuccess: () -> Unit) {
-        // 1. Ponemos el estado en "cargando"
-        _uiState.update { it.copy(isLoading = true) }
-
-        // 2. Validamos
-        if (validarFormulario()) {
-            // 3. Si es válido, lanzamos corrutina
-            viewModelScope.launch {
-                // 4. Guardamos email
-                sessionManager.saveUserEmail(_uiState.value.email)
-
-                // 5. Quitamos carga
-                _uiState.update { it.copy(isLoading = false) }
-
-                // 6. ¡Llamamos al callback para navegar!
-                onRegisterSuccess()
-            }
-        } else {
-            // 3b. Si NO es válido, quitamos la carga
-            _uiState.update { it.copy(isLoading = false) }
+    // Helper para limpiar errores globales al escribir
+    private fun updateState(update: (RegisterUiState) -> RegisterUiState) {
+        _uiState.update {
+            update(it).copy(isLoading = false, registerErrorGlobal = null)
         }
     }
 
-    /**
-     * Valida el estado actual del formulario y actualiza el estado de los errores.
-     * AHORA ES PRIVADA.
-     * @return `true` si el formulario es válido, `false` si contiene errores.
-     */
-    private fun validarFormulario(): Boolean {
-        // Obtiene el estado actual para no tener que repetirlo.
-        val state = _uiState.value
-        // Crea un nuevo objeto de errores basado en las validaciones.
-        val newErrors = RegisterErrorState(
-            nombre = if (state.nombre.isBlank()) "El nombre es obligatorio" else null,
-            apellido = if (state.apellido.isBlank()) "El apellido es obligatorio" else null,
-            run = if (!isValidRun(state.run)) "El RUN no es válido" else null,
-            email = if (!isValidEmail(state.email)) "El correo no es válido" else null,
-            password = if (state.password.length < 4) "La contraseña debe tener al menos 4 caracteres" else null,
-            confirmPassword = if (state.password != state.confirmPassword) "Las contraseñas no coinciden" else null,
-            aceptaTerminos = if (!state.aceptaTerminos) "Debes aceptar los términos y condiciones" else null
+    fun onRegisterClicked(onSuccess: () -> Unit) {
+        if (!validarLocal()) return
+
+        _uiState.update { it.copy(isLoading = true, registerErrorGlobal = null) }
+
+        viewModelScope.launch {
+            try {
+                val state = _uiState.value
+                val request = RegisterRequestDto(
+                    nombre = state.nombre,
+                    apellido = state.apellido,
+                    run = state.run,
+                    email = state.email,
+                    password = state.password,
+                    region = state.region,
+                    comuna = state.comuna,
+                    direccion = state.direccion
+                )
+
+                val response = authRepository.register(request)
+
+                if (response.isSuccessful && response.body() != null) {
+                    sessionManager.saveUserEmail(response.body()!!.usuario.email)
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                } else {
+                    // Manejo de errores HTTP (400, 403, 500) que no lanzan excepción en Retrofit normal
+                    val errorMsg = if (response.code() == 400 || response.code() == 403) {
+                        "El correo electrónico ya está registrado."
+                    } else {
+                        "Error del servidor (${response.code()}). Intente más tarde."
+                    }
+                    _uiState.update { it.copy(isLoading = false, registerErrorGlobal = errorMsg) }
+                }
+            } catch (e: Exception) {
+                // Errores de red (sin internet, servidor apagado)
+                _uiState.update { it.copy(isLoading = false, registerErrorGlobal = "Error de conexión. Revise su internet.") }
+            }
+        }
+    }
+
+    private fun validarLocal(): Boolean {
+        val s = _uiState.value
+        val err = RegisterErrorState(
+            nombre = if (s.nombre.isBlank()) "Falta nombre" else null,
+            apellido = if (s.apellido.isBlank()) "Falta apellido" else null,
+            run = if (s.run.isBlank()) "Falta RUN" else null,
+            email = if (!Patterns.EMAIL_ADDRESS.matcher(s.email).matches()) "Correo inválido" else null,
+            password = if (s.password.length < 4) "Mínimo 4 caracteres" else null,
+            confirmPassword = if (s.password != s.confirmPassword) "No coinciden" else null,
+            region = if (s.region.isBlank()) "Seleccione región" else null,
+            comuna = if (s.comuna.isBlank()) "Seleccione comuna" else null,
+            direccion = if (s.direccion.isBlank()) "Falta dirección" else null,
+            aceptaTerminos = if (!s.aceptaTerminos) "Debe aceptar" else null
         )
-        // Actualiza el estado de la UI con los nuevos errores que se encontraron.
-        _uiState.update { it.copy(errors = newErrors) }
-
-        // Devuelve 'true' solo si TODOS los campos de error son nulos (o sea, no hay errores).
-        val isValid = newErrors.nombre == null && newErrors.apellido == null && newErrors.run == null &&
-                newErrors.email == null && newErrors.password == null &&
-                newErrors.confirmPassword == null && newErrors.aceptaTerminos == null
-
-        return isValid
-    }
-
-    /**
-     * Comprueba si un email tiene un formato válido.
-     * @param email El correo a validar.
-     * @return `true` si es un email válido.
-     */
-    private fun isValidEmail(email: String): Boolean {
-        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
-    }
-
-    /**
-     * Comprueba si un RUN chileno tiene el formato correcto (ej: 12345678-9).
-     * @param run El RUN a validar.
-     * @return `true` si el formato es válido.
-     */
-    private fun isValidRun(run: String): Boolean {
-        val regex = """^\d{7,8}-[\d|kK]$""".toRegex()
-        return regex.matches(run)
+        _uiState.update { it.copy(errors = err) }
+        return err.hasNoErrors()
     }
 }
-
