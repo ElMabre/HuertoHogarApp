@@ -7,81 +7,59 @@ import com.huertohogar.app.model.Producto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
  * ViewModel para la pantalla de inicio (HomeScreen).
- * Se encarga de la lógica de negocio y de exponer el estado a la UI.
  */
 class HomeViewModel : ViewModel() {
 
-    // Instanciamos el repositorio que ya sabe cómo hablar con la API (Puerto 8082)
     private val repository = ProductRepository()
 
-    // _uiState es un flujo de datos que guarda el estado actual de la pantalla de inicio.
+    // Estado de la UI
     private val _uiState = MutableStateFlow(HomeUiState())
-
-    // uiState es la versión pública y de solo lectura del estado.
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    /**
-     * El bloque `init` se ejecuta automáticamente cuando se crea el ViewModel.
-     */
     init {
         cargarProductosDestacados()
     }
 
-    /**
-     * Carga los productos desde el Backend y toma algunos como destacados.
-     */
     private fun cargarProductosDestacados() {
         viewModelScope.launch {
-            // Indicamos que estamos cargando
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true) }
 
             try {
-                // 1. Llamada al Repositorio (Backend)
-                val listaDto = repository.getAllProductos()
+                // 1. Llamada al Repositorio
+                // CORRECCIÓN: Usamos getAllProducts() que ya devuelve la lista limpia (con .trim() en las URLs)
+                val listaProductos = repository.getAllProducts()
 
-                // 2. Mapeo: Convertimos de DTO (Red) a Producto (UI)
-                val listaProductosUi = listaDto.map { dto ->
-                    Producto(
-                        id = dto.sku, // Usamos SKU para la navegación
-                        nombre = dto.nombre,
-                        descripcion = dto.descripcion,
-                        precio = dto.precio.toDouble(),
-                        stock = dto.stock,
-                        categoria = dto.categoria ?: "General",
-                        imagenUrl = dto.imagenUrl ?: "",
-                        // Valores por defecto para campos que no vienen en el endpoint general
-                        origen = "Chile",
-                        unidad = "Unidad"
+                // 2. Lógica de Negocio: Tomamos los primeros 5 como "Destacados"
+                val destacados = listaProductos.take(5)
+
+                // 3. Actualizamos la UI
+                _uiState.update {
+                    it.copy(
+                        productosDestacados = destacados,
+                        isLoading = false
                     )
                 }
 
-                // 3. Lógica de Negocio: Tomamos los primeros 5 como "Destacados"
-                val destacados = listaProductosUi.take(5)
-
-                // 4. Actualizamos la UI
-                _uiState.value = HomeUiState(
-                    productosDestacados = destacados,
-                    isLoading = false
-                )
-
             } catch (e: Exception) {
-                // En caso de error, dejamos la lista vacía y quitamos el loader
                 e.printStackTrace()
-                _uiState.value = HomeUiState(
-                    productosDestacados = emptyList(),
-                    isLoading = false
-                )
+                _uiState.update {
+                    it.copy(
+                        productosDestacados = emptyList(),
+                        isLoading = false
+                    )
+                }
             }
         }
     }
 }
 
 /**
- * Data class que representa el estado completo de la UI para HomeScreen.
+ * Estado de la UI para HomeScreen.
  */
 data class HomeUiState(
     val productosDestacados: List<Producto> = emptyList(),

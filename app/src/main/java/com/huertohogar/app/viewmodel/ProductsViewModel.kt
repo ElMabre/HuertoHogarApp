@@ -1,45 +1,55 @@
 package com.huertohogar.app.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.huertohogar.app.data.remote.model.ProductDto
 import com.huertohogar.app.data.repository.ProductRepository
+import com.huertohogar.app.model.Producto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ProductsViewModel : ViewModel() {
+/**
+ * Estado de la UI para la pantalla de Productos (Catálogo).
+ */
+data class ProductsUiState(
+    val productos: List<Producto> = emptyList(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
+)
+
+class ProductsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ProductRepository()
 
-    // Estado de la lista de productos
-    private val _products = MutableStateFlow<List<ProductDto>>(emptyList())
-    val products: StateFlow<List<ProductDto>> = _products.asStateFlow()
-
-    // Estado de carga
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    // Estado de error
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    private val _uiState = MutableStateFlow(ProductsUiState())
+    val uiState: StateFlow<ProductsUiState> = _uiState.asStateFlow()
 
     init {
-        fetchProducts()
+        cargarProductos()
     }
 
-    fun fetchProducts() {
+    fun cargarProductos() {
         viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                val listaProductos = repository.getAllProductos()
-                _products.value = listaProductos
+                // El repositorio ya aplica el .trim() a las URLs de las imágenes
+                val lista = repository.getAllProducts()
+                _uiState.update {
+                    it.copy(
+                        productos = lista,
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
-                _errorMessage.value = "No se pudieron cargar los productos: ${e.message}"
-            } finally {
-                _isLoading.value = false
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Error al cargar productos: ${e.message}"
+                    )
+                }
             }
         }
     }

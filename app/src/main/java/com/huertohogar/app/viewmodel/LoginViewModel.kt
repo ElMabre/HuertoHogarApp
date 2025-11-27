@@ -5,8 +5,8 @@ import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.huertohogar.app.data.local.datastorage.SessionManager
-import com.huertohogar.app.data.repository.AuthRepository
 import com.huertohogar.app.data.remote.model.LoginRequestDto
+import com.huertohogar.app.data.repository.AuthRepository
 import com.huertohogar.app.model.LoginErrorState
 import com.huertohogar.app.model.LoginUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,8 +17,9 @@ import kotlinx.coroutines.launch
 
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
+    // Se instancia con el contexto de la aplicación
     private val sessionManager = SessionManager(application)
-    private val authRepository = AuthRepository() // Instanciamos el repositorio
+    private val authRepository = AuthRepository()
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -29,7 +30,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 email = email,
                 errors = currentState.errors.copy(email = null),
                 isLoading = false,
-                loginError = null // Limpiamos errores generales
+                loginError = null
             )
         }
     }
@@ -70,17 +71,17 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful && response.body() != null) {
                     val authData = response.body()!!
 
-                    // 4. Guardar sesión (Token y Datos del usuario)
-                    // Nota: Asegúrate de que tu SessionManager tenga métodos para guardar el token.
-                    // Si solo guarda email, por ahora guardamos eso.
+                    // 4. Guardar sesión COMPLETA (Email, Token e ID)
                     sessionManager.saveUserEmail(authData.usuario.email)
+                    sessionManager.saveAuthToken(authData.token)
+                    sessionManager.saveUserId(authData.usuario.id)
 
-                    // TODO: Idealmente guardar authData.token en SessionManager también.
+                    // También podrías guardar la imagen si viniera del backend
+                    // sessionManager.saveProfileImage(...)
 
                     _uiState.update { it.copy(isLoading = false) }
                     onLoginSuccess()
                 } else {
-                    // Error del servidor (ej: 401 Credenciales inválidas)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -89,7 +90,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             } catch (e: Exception) {
-                // Error de red
                 _uiState.update {
                     it.copy(
                         isLoading = false,

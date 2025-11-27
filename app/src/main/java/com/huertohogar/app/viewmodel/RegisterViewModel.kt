@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import retrofit2.HttpException // Importante para detectar códigos de error
 
 class RegisterViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -24,95 +23,108 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
-    // --- Inputs de Texto ---
-    fun onNombreChange(v: String) = updateState { it.copy(nombre = v, errors = it.errors.copy(nombre = null)) }
-    fun onApellidoChange(v: String) = updateState { it.copy(apellido = v, errors = it.errors.copy(apellido = null)) }
-    fun onRunChange(v: String) = updateState { it.copy(run = v, errors = it.errors.copy(run = null)) }
-    fun onEmailChange(v: String) = updateState { it.copy(email = v, errors = it.errors.copy(email = null)) }
-    fun onPasswordChange(v: String) = updateState { it.copy(password = v, errors = it.errors.copy(password = null)) }
-    fun onConfirmChange(v: String) = updateState { it.copy(confirmPassword = v, errors = it.errors.copy(confirmPassword = null)) }
-    fun onDireccionChange(v: String) = updateState { it.copy(direccion = v, errors = it.errors.copy(direccion = null)) }
+    // --- Actualización de campos ---
 
-    // --- Selectores ---
+    fun onNombreChange(nombre: String) {
+        _uiState.update { it.copy(nombre = nombre, errors = it.errors.copy(nombre = null)) }
+    }
+
+    fun onApellidoChange(apellido: String) {
+        _uiState.update { it.copy(apellido = apellido, errors = it.errors.copy(apellido = null)) }
+    }
+
+    fun onRunChange(run: String) {
+        _uiState.update { it.copy(run = run, errors = it.errors.copy(run = null)) }
+    }
+
     fun onRegionSelected(region: String) {
-        updateState {
-            it.copy(
-                region = region,
-                comuna = "", // Reseteamos comuna al cambiar región
-                errors = it.errors.copy(region = null)
-            )
-        }
+        // Al cambiar región, reseteamos la comuna
+        _uiState.update { it.copy(region = region, comuna = "", errors = it.errors.copy(region = null)) }
     }
 
     fun onComunaSelected(comuna: String) {
-        updateState { it.copy(comuna = comuna, errors = it.errors.copy(comuna = null)) }
+        _uiState.update { it.copy(comuna = comuna, errors = it.errors.copy(comuna = null)) }
     }
 
-    fun onAceptaTerminosChange(v: Boolean) = updateState { it.copy(aceptaTerminos = v, errors = it.errors.copy(aceptaTerminos = null)) }
-
-    // Helper para limpiar errores globales al escribir
-    private fun updateState(update: (RegisterUiState) -> RegisterUiState) {
-        _uiState.update {
-            update(it).copy(isLoading = false, registerErrorGlobal = null)
-        }
+    fun onDireccionChange(direccion: String) {
+        _uiState.update { it.copy(direccion = direccion, errors = it.errors.copy(direccion = null)) }
     }
 
-    fun onRegisterClicked(onSuccess: () -> Unit) {
-        if (!validarLocal()) return
+    fun onEmailChange(email: String) {
+        _uiState.update { it.copy(email = email, errors = it.errors.copy(email = null)) }
+    }
+
+    fun onPasswordChange(password: String) {
+        _uiState.update { it.copy(password = password, errors = it.errors.copy(password = null)) }
+    }
+
+    // --- Lógica de Registro ---
+
+    fun onRegisterClicked(onRegisterSuccess: () -> Unit) {
+        if (!validarFormulario()) return
 
         _uiState.update { it.copy(isLoading = true, registerErrorGlobal = null) }
 
         viewModelScope.launch {
             try {
-                val state = _uiState.value
+                val currentState = _uiState.value
                 val request = RegisterRequestDto(
-                    nombre = state.nombre,
-                    apellido = state.apellido,
-                    run = state.run,
-                    email = state.email,
-                    password = state.password,
-                    region = state.region,
-                    comuna = state.comuna,
-                    direccion = state.direccion
+                    nombre = currentState.nombre,
+                    apellido = currentState.apellido,
+                    run = currentState.run,
+                    email = currentState.email,
+                    password = currentState.password,
+                    region = currentState.region,
+                    comuna = currentState.comuna,
+                    direccion = currentState.direccion
                 )
 
                 val response = authRepository.register(request)
 
                 if (response.isSuccessful && response.body() != null) {
-                    sessionManager.saveUserEmail(response.body()!!.usuario.email)
+                    val authData = response.body()!!
+                    // Guardamos la sesión automáticamente tras el registro
+                    sessionManager.saveUserEmail(authData.usuario.email)
+
                     _uiState.update { it.copy(isLoading = false) }
-                    onSuccess()
+                    onRegisterSuccess()
                 } else {
-                    // Manejo de errores HTTP (400, 403, 500) que no lanzan excepción en Retrofit normal
-                    val errorMsg = if (response.code() == 400 || response.code() == 403) {
-                        "El correo electrónico ya está registrado."
-                    } else {
-                        "Error del servidor (${response.code()}). Intente más tarde."
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            registerErrorGlobal = "Error en el registro. Verifique sus datos o intente más tarde."
+                        )
                     }
-                    _uiState.update { it.copy(isLoading = false, registerErrorGlobal = errorMsg) }
                 }
             } catch (e: Exception) {
-                // Errores de red (sin internet, servidor apagado)
-                _uiState.update { it.copy(isLoading = false, registerErrorGlobal = "Error de conexión. Revise su internet.") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        registerErrorGlobal = "Error de conexión: ${e.message}"
+                    )
+                }
             }
         }
     }
 
-    private fun validarLocal(): Boolean {
-        val s = _uiState.value
-        val err = RegisterErrorState(
-            nombre = if (s.nombre.isBlank()) "Falta nombre" else null,
-            apellido = if (s.apellido.isBlank()) "Falta apellido" else null,
-            run = if (s.run.isBlank()) "Falta RUN" else null,
-            email = if (!Patterns.EMAIL_ADDRESS.matcher(s.email).matches()) "Correo inválido" else null,
-            password = if (s.password.length < 4) "Mínimo 4 caracteres" else null,
-            confirmPassword = if (s.password != s.confirmPassword) "No coinciden" else null,
-            region = if (s.region.isBlank()) "Seleccione región" else null,
-            comuna = if (s.comuna.isBlank()) "Seleccione comuna" else null,
-            direccion = if (s.direccion.isBlank()) "Falta dirección" else null,
-            aceptaTerminos = if (!s.aceptaTerminos) "Debe aceptar" else null
+    private fun validarFormulario(): Boolean {
+        val state = _uiState.value
+        val errors = RegisterErrorState(
+            nombre = if (state.nombre.isBlank()) "El nombre es obligatorio" else null,
+            apellido = if (state.apellido.isBlank()) "El apellido es obligatorio" else null,
+            run = if (state.run.isBlank()) "El RUN es obligatorio" else null,
+            region = if (state.region.isBlank()) "Seleccione una región" else null,
+            comuna = if (state.comuna.isBlank()) "Seleccione una comuna" else null,
+            direccion = if (state.direccion.isBlank()) "La dirección es obligatoria" else null,
+            email = if (!Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) "Email inválido" else null,
+            password = if (state.password.length < 6) "Mínimo 6 caracteres" else null
         )
-        _uiState.update { it.copy(errors = err) }
-        return err.hasNoErrors()
+
+        _uiState.update { it.copy(errors = errors) }
+
+        return errors.nombre == null && errors.apellido == null &&
+                errors.run == null && errors.region == null &&
+                errors.comuna == null && errors.direccion == null &&
+                errors.email == null && errors.password == null
     }
 }

@@ -12,7 +12,6 @@ data class LoginRequestDto(
 
 /**
  * Modelo para enviar los datos de Registro.
- * Actualizado con Región, Comuna y Dirección.
  */
 data class RegisterRequestDto(
     @SerializedName("nombre") val nombre: String,
@@ -20,11 +19,19 @@ data class RegisterRequestDto(
     @SerializedName("run") val run: String,
     @SerializedName("email") val email: String,
     @SerializedName("password") val password: String,
-
-    // --- Nuevos Campos ---
     @SerializedName("region") val region: String,
     @SerializedName("comuna") val comuna: String,
     @SerializedName("direccion") val direccion: String
+)
+
+/**
+ * NUEVO: Modelo para actualizar los datos del usuario (Dirección).
+ */
+data class UserUpdateDto(
+    @SerializedName("region") val region: String,
+    @SerializedName("comuna") val comuna: String,
+    @SerializedName("direccion") val direccion: String
+    // Podrías agregar nombre/apellido si quisieras editarlos también
 )
 
 /**
@@ -36,12 +43,17 @@ data class AuthResponseDto(
 )
 
 /**
- * Modelo de usuario que viene dentro de AuthResponse.
+ * Modelo de usuario.
  */
 data class UsuarioDto(
     @SerializedName("id") val id: Long,
     @SerializedName("nombre") val nombre: String,
     @SerializedName("apellido") val apellido: String,
     @SerializedName("email") val email: String,
-    @SerializedName("rol") val rol: String
+    @SerializedName("rol") val rol: String,
+
+    // Agregamos estos campos para poder mostrarlos en el perfil
+    @SerializedName("region") val region: String? = "",
+    @SerializedName("comuna") val comuna: String? = "",
+    @SerializedName("direccion") val direccion: String? = ""
 )

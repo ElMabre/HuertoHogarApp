@@ -14,6 +14,8 @@ sealed class AppScreens(val route: String) {
     object CartScreen : AppScreens("cart_screen")
     object ProfileScreen : AppScreens("profile_screen")
 
-    // Nueva ruta para el mapa
+    // Rutas nuevas
     object MapScreen : AppScreens("map_screen")
+    object AboutUsScreen : AppScreens("about_us_screen")
+    object ContactScreen : AppScreens("contact_screen")
 }
