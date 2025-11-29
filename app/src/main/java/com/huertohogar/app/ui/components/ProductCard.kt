@@ -25,10 +25,13 @@ import coil.request.ImageRequest
 import com.huertohogar.app.R
 import com.huertohogar.app.model.Producto
 import com.huertohogar.app.ui.theme.HuertoHogarAppTheme
+import java.util.Locale
+
+// Definimos el Locale para Chile
+private val chileLocale: Locale = Locale.forLanguageTag("es-CL")
 
 /**
  * Un Composable reutilizable que muestra la información de un producto en formato de tarjeta.
- * Corregido para aceptar un Modifier externo.
  */
 @SuppressLint("DefaultLocale")
 @Composable
@@ -41,7 +44,7 @@ fun ProductCard(
         modifier = modifier
             .widthIn(min = 160.dp, max = 200.dp)
             .padding(vertical = 4.dp, horizontal = 4.dp)
-            .clickable { onProductClick(producto.id) },
+            .clickable { onProductClick(producto.id) }, // Usamos el SKU (String) para la navegación
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -71,7 +74,8 @@ fun ProductCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "$${String.format("%,.0f", producto.precio)} CLP / ${producto.unidad}",
+                    // Usamos el Locale de Chile para el formato de moneda
+                    text = "$${String.format(chileLocale, "%,.0f", producto.precio)} CLP / ${producto.unidad}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
@@ -84,8 +88,10 @@ fun ProductCard(
 @Preview(showBackground = true, widthDp = 200)
 @Composable
 fun ProductCardPreview() {
+    // Datos de prueba actualizados con el nuevo campo databaseId
     val productoDeEjemplo = Producto(
-        id = "FR001",
+        id = "FR001",          // SKU (String)
+        databaseId = 100L,     // ID Numérico (Long) - ¡Nuevo!
         nombre = "Manzanas Fuji",
         descripcion = "Deliciosas manzanas.",
         precio = 1200.0,

@@ -6,46 +6,50 @@ import com.huertohogar.app.model.Producto
 
 class ProductRepository {
 
+    // Usamos la API de catálogo configurada en RetrofitClient
     private val api = RetrofitClient.productApi
 
     suspend fun getAllProducts(): List<Producto> {
-        val response = api.getAllProductos()
-        if (response.isSuccessful && response.body() != null) {
-            // Convertimos la lista
-            return response.body()!!.map { dto -> dto.toDomain() }
+        try {
+            val response = api.getAllProductos()
+            if (response.isSuccessful && response.body() != null) {
+                return response.body()!!.map { dto -> dto.toDomain() }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
         return emptyList()
     }
 
-    suspend fun getProductById(id: String): Producto? {
-        val response = api.getProductoBySku(id)
-        if (response.isSuccessful && response.body() != null) {
-            return response.body()!!.toDomain()
+    suspend fun getProductById(sku: String): Producto? {
+        try {
+            // Buscamos por SKU en la API
+            val response = api.getProductoBySku(sku)
+            if (response.isSuccessful && response.body() != null) {
+                return response.body()!!.toDomain()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
         return null
     }
 
-    // --- FUNCIÓN DE MAPEO SEGURA ---
+    // --- FUNCIÓN DE MAPEO ACTUALIZADA ---
     private fun ProductDto.toDomain(): Producto {
         return Producto(
-            // Si el ID viene nulo, usamos "SIN_ID" para que no se caiga
-            id = this.id ?: "SIN_ID",
+            // 1. Mapeamos el SKU al campo 'id' (usado para navegación en la app)
+            id = this.sku ?: "SIN_SKU",
 
-            // Si el nombre viene nulo, ponemos "Sin Nombre"
+            // 2. Mapeamos el ID numérico de la BD al nuevo campo 'databaseId' (usado para pedidos)
+            databaseId = this.id ?: 0L,
+
             nombre = this.nombre ?: "Sin Nombre",
-
             descripcion = this.descripcion ?: "",
-
-            // Si el precio viene nulo, ponemos 0.0
             precio = this.precio ?: 0.0,
-
             stock = this.stock ?: 0,
-
             categoria = this.categoria ?: "General",
-
-            // Manejo de imagen (quitamos espacios y nulos)
+            // Limpiamos la URL de espacios en blanco por seguridad
             imagenUrl = this.imagenUrl?.trim() ?: "",
-
             origen = this.origen ?: "Chile",
             unidad = this.unidad ?: "Unidad"
         )

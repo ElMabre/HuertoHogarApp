@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Configuración base para permitir tráfico HTTP (no cifrado) en toda la app (solo para desarrollo/debug) -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Configuración específica y forzada para tu servidor EC2 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- IP Pública de tu instancia AWS EC2 -->
+        <domain includeSubdomains="true">18.211.31.168</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

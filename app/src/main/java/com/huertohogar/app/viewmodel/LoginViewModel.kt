@@ -1,6 +1,7 @@
 package com.huertohogar.app.viewmodel
 
 import android.app.Application
+import android.util.Log
 import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,6 +24,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+
+    // TAG para filtrar en Logcat
+    private val TAG = "LoginViewModel"
 
     fun onEmailChange(email: String) {
         _uiState.update { currentState ->
@@ -61,6 +65,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             try {
+                // LOG: Aviso de inicio
+                Log.d(TAG, "Intentando login con: ${_uiState.value.email}")
+
                 // 3. Llamada al Backend
                 val request = LoginRequestDto(
                     email = _uiState.value.email,
@@ -70,6 +77,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (response.isSuccessful && response.body() != null) {
                     val authData = response.body()!!
+
+                    // LOG: Éxito
+                    Log.i(TAG, "Login exitoso. Guardando sesión...")
 
                     // 4. Guardar sesión COMPLETA (Email, Token e ID)
                     sessionManager.saveUserEmail(authData.usuario.email)
@@ -82,17 +92,26 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(isLoading = false) }
                     onLoginSuccess()
                 } else {
+                    // LOG: Error del servidor
+                    Log.e(TAG, "Error del servidor: ${response.code()} ${response.message()}")
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            loginError = "Credenciales incorrectas o error en el servidor."
+                            loginError = "Credenciales incorrectas o error en el servidor (${response.code()})."
                         )
                     }
                 }
             } catch (e: Exception) {
+                // LOG: Error Crítico (Red, Timeout, etc)
+                // Esto hará que salga en rojo en tu Logcat
+                Log.e(TAG, "Error CRÍTICO en Login", e)
+                e.printStackTrace()
+
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        // Mostramos el mensaje técnico entre paréntesis para que sepas qué pasó
                         loginError = "Error de conexión: ${e.message}"
                     )
                 }

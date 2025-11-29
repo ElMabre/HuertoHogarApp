@@ -4,11 +4,14 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences // Importante para manejar errores
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch // Importante para capturar errores de lectura
 import kotlinx.coroutines.flow.map
+import java.io.IOException // Importante
 
 // Extensión para crear el DataStore (Singleton)
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_session")
@@ -31,8 +34,22 @@ class SessionManager(private val context: Context) {
         }
     }
 
+    // CORRECCIÓN CRÍTICA AQUÍ:
     val authToken: Flow<String?> = context.dataStore.data
-        .map { preferences -> preferences[USER_TOKEN_KEY] }
+        .catch { exception ->
+            // Si ocurre un error leyendo (común al reinstalar), evitamos que la app crashee
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            // Si no hay token, devolvemos "" (vacío) en vez de null.
+            // Esto le dice a AppNavigation: "Ya terminé de leer, y NO hay usuario".
+            // Si devolvemos null, AppNavigation piensa: "Todavía estoy leyendo, sigue mostrando el círculo".
+            preferences[USER_TOKEN_KEY] ?: ""
+        }
 
     // --- USER ID (Para saber a quién actualizar) ---
     suspend fun saveUserId(id: Long) {

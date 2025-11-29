@@ -2,6 +2,8 @@ package com.huertohogar.app.data.remote.api
 
 import com.huertohogar.app.data.remote.model.AuthResponseDto
 import com.huertohogar.app.data.remote.model.LoginRequestDto
+import com.huertohogar.app.data.remote.model.PedidoRequestDto
+import com.huertohogar.app.data.remote.model.PedidoResponseDto
 import com.huertohogar.app.data.remote.model.ProductDto
 import com.huertohogar.app.data.remote.model.RegisterRequestDto
 import com.huertohogar.app.data.remote.model.UserUpdateDto
@@ -24,11 +26,11 @@ interface HuertoHogarApi {
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequestDto): Response<AuthResponseDto>
 
-    // --- Usuario Controller (Nuevo Endpoint para actualizar perfil) ---
+    // --- Usuario Controller ---
 
     @PUT("api/usuarios/perfil")
     suspend fun updateProfile(
-        @Header("Authorization") token: String, // El token va en la cabecera (Header)
+        @Header("Authorization") token: String,
         @Body request: UserUpdateDto
     ): Response<UsuarioDto>
 
@@ -39,4 +41,12 @@ interface HuertoHogarApi {
 
     @GET("api/productos/{sku}")
     suspend fun getProductoBySku(@Path("sku") sku: String): Response<ProductDto>
+
+    // --- Pedidos Controller ---
+    // Endpoint para enviar un nuevo pedido al sistema. Requiere autenticación.
+    @POST("api/pedidos")
+    suspend fun createPedido(
+        @Header("Authorization") token: String,
+        @Body request: PedidoRequestDto
+    ): Response<PedidoResponseDto>
 }
