@@ -208,7 +208,18 @@ private fun ProductDetailsContent(
 @Preview(showBackground = true)
 @Composable
 fun ProductDetailScreenPreview() {
-    val productoDeEjemplo = Producto("FR001", "Manzanas Fuji", "...", 1200.0, 150, "frutas", "", "Valle del Maule", unidad = "Kg")
+    val productoDeEjemplo = Producto(
+        id = "FR001",
+        databaseId = 1L,
+        nombre = "Manzanas Fuji",
+        descripcion = "...",
+        precio = 1200.0,
+        stock = 150,
+        categoria = "frutas",
+        imagenUrl = "",
+        origen = "Valle del Maule",
+        unidad = "Kg"
+    )
     HuertoHogarAppTheme {
         Scaffold(topBar = { TopAppBar(title = { Text("Detalle Producto") }) }) { padding ->
             Box(modifier = Modifier.padding(padding)) {
