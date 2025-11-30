@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.annotations.VisibleForTesting
 
 // Estado de la UI para la pantalla de pedidos
 data class OrderHistoryUiState(
@@ -23,8 +24,12 @@ data class OrderHistoryUiState(
 
 class OrderViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val orderRepository = OrderRepository()
-    private val sessionManager = SessionManager(application)
+    // Usamos 'var' y @VisibleForTesting para poder inyectar mocks en los tests
+    @VisibleForTesting
+    var orderRepository = OrderRepository()
+
+    @VisibleForTesting
+    var sessionManager = SessionManager(application)
 
     private val _uiState = MutableStateFlow(OrderHistoryUiState())
     val uiState: StateFlow<OrderHistoryUiState> = _uiState.asStateFlow()
@@ -34,6 +39,7 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadMyOrders() {
+        // OJO: Esta línea borra el 'message'. Por eso es importante el orden en cancelarPedido.
         _uiState.update { it.copy(isLoading = true, error = null, message = null) }
 
         viewModelScope.launch {
@@ -68,10 +74,16 @@ class OrderViewModel(application: Application) : AndroidViewModel(application) {
                 val response = orderRepository.cancelOrder(token, idPedido)
 
                 if (response.isSuccessful) {
-                    _uiState.update { it.copy(message = "Pedido cancelado exitosamente") }
-                    // Recargamos la lista para que desaparezca el pedido (o cambie de estado)
+                    // CORRECCIÓN:
+                    // 1. Primero recargamos la lista (esto limpia estados anteriores)
                     loadMyOrders()
+
+                    // 2. LUEGO fijamos el mensaje de éxito.
+                    // Si lo hiciéramos al revés, loadMyOrders borraría nuestro mensaje inmediatamente.
+                    _uiState.update { it.copy(message = "Pedido cancelado exitosamente") }
+
                 } else {
+                    // Manejo de error específico (Ej: Pedido ya enviado)
                     val errorMsg = if (response.code() == 400) "No se puede cancelar un pedido ya procesado" else "Error al cancelar"
                     _uiState.update { it.copy(isLoading = false, error = errorMsg) }
                 }

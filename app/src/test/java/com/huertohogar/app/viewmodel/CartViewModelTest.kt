@@ -6,6 +6,7 @@ import com.huertohogar.app.data.remote.model.PedidoResponseDto
 import com.huertohogar.app.data.repository.OrderRepository
 import com.huertohogar.app.model.Producto
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -89,20 +92,38 @@ class CartViewModelTest {
     }
 
     @Test
-    fun `total se calcula correctamente`() {
-        // 2 productos → 2000 + envío 3500 = 5500
+    fun `total incluye costo de envio (3500) cuando hay productos`() {
+        // DADO: 2 productos de 1000 c/u (Subtotal 2000) + Envío (3500)
+        // Total esperado = 5500
         viewModel.addToCart(productoPrueba)
         viewModel.addToCart(productoPrueba)
 
-        assertEquals(5500.0, viewModel.uiState.value.total, 0.0)
+        // CUANDO: Verificamos el estado
+        val state = viewModel.uiState.value
+
+        // ENTONCES
+        assertEquals(5500.0, state.total, 0.0)
+        assertEquals(3500.0, state.costoEnvio, 0.0)
+    }
+
+    @Test
+    fun `total es cero y sin envio si el carrito esta vacio`() {
+        // DADO: Un carrito vacío (estado inicial o después de limpiar)
+        viewModel.clearCart()
+
+        // CUANDO: Verificamos el estado
+        val state = viewModel.uiState.value
+
+        // ENTONCES: No debe cobrar envío
+        assertEquals(0.0, state.costoEnvio, 0.0)
+        assertEquals(0.0, state.total, 0.0)
+        assertTrue(state.items.isEmpty())
     }
 
     @Test
     fun `realizarPedido exitoso limpia el carrito`() = runTest {
-        // Carrito con un producto
+        // DADO: Carrito con productos y token válido
         viewModel.addToCart(productoPrueba)
-
-        // Simular token válido
         every { mockSessionManager.authToken } returns flowOf("fake-token-123")
 
         // Respuesta del backend simulada
@@ -113,33 +134,48 @@ class CartViewModelTest {
             total = 5500.0,
             metodoPago = "EFECTIVO"
         )
-
-        // Mock del createOrder exitoso
         coEvery { mockOrderRepository.createOrder(any(), any(), any()) } returns Response.success(responseDto)
 
-        // Ejecutar pedido
+        // CUANDO: Ejecutamos pedido
         viewModel.realizarPedido()
-        testDispatcher.scheduler.advanceUntilIdle()
+        testDispatcher.scheduler.advanceUntilIdle() // Esperar corrutinas
 
-        // Debe indicar éxito y vaciar carrito
+        // ENTONCES: Éxito y carrito vacío
         assertTrue(viewModel.uiState.value.checkoutSuccess)
         assertTrue(viewModel.uiState.value.items.isEmpty())
+        assertFalse(viewModel.uiState.value.isLoading)
     }
 
     @Test
     fun `realizarPedido falla si no hay usuario logueado`() = runTest {
-        // Carrito con producto
+        // DADO: Carrito con producto pero SIN token (usuario no logueado)
         viewModel.addToCart(productoPrueba)
+        every { mockSessionManager.authToken } returns flowOf("") // Token vacío
 
-        // Token vacío
-        every { mockSessionManager.authToken } returns flowOf("")
-
-        // Intentar pedido
+        // CUANDO: Intentamos pedir
         viewModel.realizarPedido()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Debe mostrar error de sesión
+        // ENTONCES: Debe haber error de checkout y NO llamar al repositorio
         val errorMsg = viewModel.uiState.value.checkoutError
-        assertTrue(errorMsg != null && errorMsg.contains("iniciar sesión"))
+        assertNotNull(errorMsg)
+        assertTrue(errorMsg!!.contains("iniciar sesión")) // Verificamos parte del mensaje
+
+        // Verificamos que NUNCA se llamó al createOrder
+        coVerify(exactly = 0) { mockOrderRepository.createOrder(any(), any(), any()) }
+    }
+
+    @Test
+    fun `realizarPedido no hace nada si el carrito esta vacio`() = runTest {
+        // DADO: Carrito vacío
+        viewModel.clearCart()
+
+        // CUANDO: Llamamos a realizar pedido
+        viewModel.realizarPedido()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // ENTONCES: No cambia a loading ni llama al repo
+        assertFalse(viewModel.uiState.value.isLoading)
+        coVerify(exactly = 0) { mockOrderRepository.createOrder(any(), any(), any()) }
     }
 }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -20,12 +19,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.huertohogar.app.data.remote.model.PedidoResponseDto
 import com.huertohogar.app.ui.components.HuertoTopAppBar
+import com.huertohogar.app.viewmodel.CartViewModel
 import com.huertohogar.app.viewmodel.OrderViewModel
 import java.text.NumberFormat
 import java.util.Locale
-
-// ViewModel temporal para el carrito en el TopBar (si no lo usas en esta pantalla, puedes pasar uno dummy)
-import com.huertohogar.app.viewmodel.CartViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +34,12 @@ fun OrderHistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // IMPORTANTE: Cargar los pedidos al entrar a la pantalla.
+    // Esto es necesario porque quitamos el 'init' del ViewModel para poder testearlo.
+    LaunchedEffect(Unit) {
+        viewModel.loadMyOrders()
+    }
 
     // Efecto para mostrar mensajes (éxito al cancelar o error)
     LaunchedEffect(uiState.message, uiState.error) {
@@ -75,7 +78,12 @@ fun OrderHistoryScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(64.dp)
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("No tienes pedidos realizados", color = Color.Gray)
                 }
@@ -111,7 +119,11 @@ fun PedidoItem(pedido: PedidoResponseDto, onCancelClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Pedido #${pedido.id}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "Pedido #${pedido.id}",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
                 EstadoChip(estado = pedido.estado)
             }
 
@@ -119,9 +131,18 @@ fun PedidoItem(pedido: PedidoResponseDto, onCancelClick: () -> Unit) {
 
             // Fecha
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = null,
+                    tint = Color.Gray,
+                    modifier = Modifier.size(16.dp)
+                )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(pedido.fecha ?: "Fecha desconocida", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                Text(
+                    text = pedido.fecha ?: "Fecha desconocida",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -132,8 +153,14 @@ fun PedidoItem(pedido: PedidoResponseDto, onCancelClick: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("${detalle.cantidad}x ${detalle.producto?.nombre ?: "Producto"}", style = MaterialTheme.typography.bodyMedium)
-                    Text(formatCurrency(detalle.precioUnitario * detalle.cantidad), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = "${detalle.cantidad}x ${detalle.producto?.nombre ?: "Producto"}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = formatCurrency(detalle.precioUnitario * detalle.cantidad),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
 
@@ -145,7 +172,11 @@ fun PedidoItem(pedido: PedidoResponseDto, onCancelClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Total: ${formatCurrency(pedido.total)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    text = "Total: ${formatCurrency(pedido.total)}",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
                 // Solo se puede cancelar si está Pendiente
                 if (pedido.estado.equals("Pendiente", ignoreCase = true)) {
@@ -153,7 +184,11 @@ fun PedidoItem(pedido: PedidoResponseDto, onCancelClick: () -> Unit) {
                         onClick = onCancelClick,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Cancelar")
                     }

@@ -21,6 +21,17 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            // NOTA: Debes poner tu archivo .jks en la carpeta /app
+            // Cambia el nombre del archivo y las contraseñas por las tuyas.
+            storeFile = file("huertohogar-key.jks")
+            storePassword = "252532"
+            keyAlias = "huertohogar-key"
+            keyPassword = "252532"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -28,8 +39,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
