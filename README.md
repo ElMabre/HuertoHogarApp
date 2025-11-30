@@ -72,9 +72,11 @@ Adicionalmente, la aplicación consume la API pública **TheMealDB** para ofrece
     * *Nota:* Asegúrese de tener conexión a internet para cargar los datos del EC2 y los mapas.
       
 ## 6. Pasos para Ejecutar desde Android
-1.Descargar e instalar la apk de HuertoHogar
-2.Permitir instalacion sin escaneo de seguridad 
-3.Iniciar la aplicacion e iniciar sesion o continuar con el registro de la cuenta.
+
+1. **Descargar e instalar** la APK de HuertoHogar en el dispositivo.
+2. **Habilitar la instalación desde orígenes desconocidos** si el sistema lo solicita.
+3. **Abrir la aplicación** e iniciar sesión o completar el proceso de registro para crear una cuenta.
+
 
 ## 7. Evidencia de Entrega (APK Firmado)
 
@@ -99,4 +101,5 @@ Captura de pantalla de Android Studio confirmando la generación correcta del `a
   Desarrollado para Evaluación Parcial 4 - 2025
 
 </p>
+
 
