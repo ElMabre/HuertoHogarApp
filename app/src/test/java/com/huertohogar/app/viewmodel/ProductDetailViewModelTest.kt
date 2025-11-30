@@ -23,6 +23,7 @@ import org.junit.Test
 class ProductDetailViewModelTest {
 
     private lateinit var viewModel: ProductDetailViewModel
+
     // Mockeamos el repositorio y la aplicación
     private val mockRepository = mockk<ProductRepository>(relaxed = true)
     private val mockApplication = mockk<Application>(relaxed = true)
@@ -115,5 +116,21 @@ class ProductDetailViewModelTest {
         assertNull(state.producto)
         assertNotNull(state.error)
         assert(state.error!!.contains("Fallo de conexión"))
+    }
+
+    @Test
+    fun `loadProductDetails con ID nulo muestra error`() = runTest {
+        // ESTE ES EL TEST NUEVO PARA MEJORAR EL COVERAGE
+
+        // CUANDO: Llamamos a la función pasando null
+        viewModel.loadProductDetails(null)
+
+        // No es necesario advanceUntilIdle() porque la validación de null ocurre antes de lanzar la corrutina
+
+        // ENTONCES
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading) // No debe quedar cargando
+        assertNotNull(state.error)   // Debe haber error
+        assertEquals("ID inválido", state.error) // El mensaje exacto del ViewModel
     }
 }

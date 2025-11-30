@@ -23,8 +23,7 @@ android {
 
     signingConfigs {
         create("release") {
-            // NOTA: Debes poner tu archivo .jks en la carpeta /app
-            // Cambia el nombre del archivo y las contraseñas por las tuyas.
+
             storeFile = file("huertohogar-key.jks")
             storePassword = "252532"
             keyAlias = "huertohogar-key"

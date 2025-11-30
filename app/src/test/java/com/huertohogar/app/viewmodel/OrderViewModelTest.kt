@@ -67,6 +67,9 @@ class OrderViewModelTest {
         coEvery { mockOrderRepository.getMyOrders(any()) } returns Response.success(listaDesordenada)
 
         // CUANDO
+        // Limpiamos invocaciones previas del init
+        io.mockk.clearMocks(mockOrderRepository, answers = false)
+
         viewModel.loadMyOrders()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -84,11 +87,12 @@ class OrderViewModelTest {
         // DADO: Token vacío
         every { mockSessionManager.authToken } returns flowOf("")
 
-        // FIX: Create a NEW instance of ViewModel here.
-        // The instance in 'setUp' already ran its 'init' block with a valid token (triggering a call).
-        // Creating a new one here ensures 'init' runs with the empty token we just set.
+        // SOLUCIÓN: Usamos un repositorio mock NUEVO y EXCLUSIVO para este test.
+        // Así evitamos que la llamada del 'viewModel' creado en setUp() interfiera en la verificación.
+        val localMockRepository = mockk<OrderRepository>(relaxed = true)
+
         val localViewModel = OrderViewModel(mockApplication)
-        localViewModel.orderRepository = mockOrderRepository
+        localViewModel.orderRepository = localMockRepository // Inyectamos el mock local
         localViewModel.sessionManager = mockSessionManager
 
         // CUANDO
@@ -101,8 +105,8 @@ class OrderViewModelTest {
         assertNotNull(state.error)
         assertTrue(state.error!!.contains("No hay sesión"))
 
-        // Now this should pass because this specific ViewModel instance never made a successful call
-        coVerify(exactly = 0) { mockOrderRepository.getMyOrders(any()) }
+        // Verificamos sobre el mock LOCAL, que nadie más ha tocado.
+        coVerify(exactly = 0) { localMockRepository.getMyOrders(any()) }
     }
 
     @Test
@@ -124,8 +128,7 @@ class OrderViewModelTest {
 
         // Verificar flujo completo: Cancelar -> Recargar
         coVerify { mockOrderRepository.cancelOrder(any(), idPedido) }
-        // We expect at least 1 call (from init) + 1 from cancel reload = 2 calls total usually.
-        // Using atLeast = 1 satisfies the requirement that it WAS called.
+        // Verificamos al menos 1 llamada (puede haber más por el init, pero importa que se llame)
         coVerify(atLeast = 1) { mockOrderRepository.getMyOrders(any()) }
     }
 

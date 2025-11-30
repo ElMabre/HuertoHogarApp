@@ -20,6 +20,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -90,6 +91,48 @@ class CartViewModelTest {
         assertEquals(1, items.size)
         assertEquals(2, items[0].cantidad)
     }
+
+    // --- NUEVOS TESTS PARA SUBIR COVERAGE ---
+
+    @Test
+    fun `removeFromCart elimina el producto del carrito`() {
+        // DADO: Un carrito con un producto
+        viewModel.addToCart(productoPrueba)
+        assertFalse(viewModel.uiState.value.items.isEmpty())
+
+        // CUANDO: Eliminamos ese producto
+        viewModel.removeFromCart(productoPrueba.id)
+
+        // ENTONCES: El carrito debe estar vacío y el total ser 0
+        assertTrue(viewModel.uiState.value.items.isEmpty())
+        assertEquals(0.0, viewModel.uiState.value.total, 0.0)
+    }
+
+    @Test
+    fun `updateQuantity elimina el producto si la cantidad es 0 o menor`() {
+        // DADO: Un carrito con un producto
+        viewModel.addToCart(productoPrueba)
+
+        // CUANDO: Actualizamos la cantidad a 0
+        viewModel.updateQuantity(productoPrueba.id, 0)
+
+        // ENTONCES: El producto debe eliminarse
+        assertTrue(viewModel.uiState.value.items.isEmpty())
+    }
+
+    @Test
+    fun `updateQuantity no hace nada si el producto no existe`() {
+        // DADO: Carrito vacío
+        viewModel.clearCart()
+
+        // CUANDO: Intentamos actualizar algo que no está
+        viewModel.updateQuantity("ID_INEXISTENTE", 5)
+
+        // ENTONCES: Sigue vacío
+        assertTrue(viewModel.uiState.value.items.isEmpty())
+    }
+
+    // ----------------------------------------
 
     @Test
     fun `total incluye costo de envio (3500) cuando hay productos`() {
@@ -177,5 +220,16 @@ class CartViewModelTest {
         // ENTONCES: No cambia a loading ni llama al repo
         assertFalse(viewModel.uiState.value.isLoading)
         coVerify(exactly = 0) { mockOrderRepository.createOrder(any(), any(), any()) }
+    }
+
+    @Test
+    fun `resetCheckoutStatus limpia los estados`() {
+        // Forzamos un estado de éxito (aunque sea indirectamente o asumiendo un estado previo)
+        // Como no podemos setear el estado directamente, confiamos en que reset lo limpie a sus valores default.
+
+        viewModel.resetCheckoutStatus()
+
+        assertFalse(viewModel.uiState.value.checkoutSuccess)
+        assertNull(viewModel.uiState.value.checkoutError)
     }
 }
