@@ -2,7 +2,7 @@ package com.huertohogar.app.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu // Icono de Hamburguesa
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,7 +19,7 @@ fun HuertoTopAppBar(
     navController: NavController,
     cartViewModel: CartViewModel,
     modifier: Modifier = Modifier,
-    onNavigateBack: (() -> Unit)? = null // Opción personalizada para volver
+    onNavigateBack: (() -> Unit)? = null
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val cartUiState by cartViewModel.uiState.collectAsState()
@@ -62,28 +62,27 @@ fun HuertoTopAppBar(
                 }
             }
 
-            // 2. Menú Desplegable (Icono Hamburguesa ahora)
+            // 2. Menú Desplegable (Hamburguesa)
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Filled.Menu, contentDescription = "Menú Principal") // CAMBIO AQUÍ
+                Icon(Icons.Filled.Menu, contentDescription = "Menú Principal")
             }
 
             DropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false }
             ) {
-                // Opción: Inicio (NUEVA)
+                // Inicio
                 DropdownMenuItem(
                     text = { Text("Inicio") },
                     onClick = {
                         menuExpanded = false
-                        // Navegamos al Home y limpiamos el stack para evitar "volver" infinito
                         navController.navigate(AppScreens.HomeScreen.route) {
                             popUpTo(AppScreens.HomeScreen.route) { inclusive = true }
                         }
                     }
                 )
 
-                // Opción: Tu Perfil
+                // Perfil
                 DropdownMenuItem(
                     text = { Text("Tu Perfil") },
                     onClick = {
@@ -91,7 +90,8 @@ fun HuertoTopAppBar(
                         navController.navigate(AppScreens.ProfileScreen.route)
                     }
                 )
-                // Opción: Productos
+
+                // Productos
                 DropdownMenuItem(
                     text = { Text("Productos") },
                     onClick = {
@@ -99,7 +99,17 @@ fun HuertoTopAppBar(
                         navController.navigate(AppScreens.ProductsScreen.route)
                     }
                 )
-                // Opción: Nosotros
+
+                // --- NUEVA OPCIÓN: RECETAS ---
+                DropdownMenuItem(
+                    text = { Text("Recetas") },
+                    onClick = {
+                        menuExpanded = false
+                        navController.navigate(AppScreens.RecipesScreen.route)
+                    }
+                )
+
+                // Nosotros
                 DropdownMenuItem(
                     text = { Text("Nosotros") },
                     onClick = {
@@ -107,7 +117,8 @@ fun HuertoTopAppBar(
                         navController.navigate(AppScreens.AboutUsScreen.route)
                     }
                 )
-                // Opción: Contacto
+
+                // Contacto
                 DropdownMenuItem(
                     text = { Text("Contacto") },
                     onClick = {

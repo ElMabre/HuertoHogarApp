@@ -26,6 +26,8 @@ import com.huertohogar.app.ui.screens.MapScreen
 import com.huertohogar.app.ui.screens.ProductDetailScreen
 import com.huertohogar.app.ui.screens.ProductsScreen
 import com.huertohogar.app.ui.screens.ProfileScreen
+// Importamos la nueva pantalla de Recetas
+import com.huertohogar.app.ui.screens.RecipeScreen
 import com.huertohogar.app.ui.screens.RegisterScreen
 import com.huertohogar.app.viewmodel.CartViewModel
 import com.huertohogar.app.viewmodel.ProfileViewModel
@@ -35,39 +37,31 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // Instanciamos SessionManager para verificar el token al inicio
     val sessionManager = remember { SessionManager(context) }
-
-    // Obtenemos el token guardado. Usamos 'null' como valor inicial para saber que está cargando.
     val tokenState by sessionManager.authToken.collectAsState(initial = null)
 
-    // ViewModels compartidos
     val cartViewModel: CartViewModel = viewModel()
     val profileViewModel: ProfileViewModel = viewModel()
 
-    // Lógica de "Splash": Mientras leemos el disco (tokenState es null), mostramos un cargando.
     if (tokenState == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
-        // Una vez leído el token, decidimos a dónde ir.
-        // Si hay token (no es nulo ni vacío), vamos al Home. Si no, al Login.
         val startDest = if (tokenState.isNullOrBlank()) AppScreens.LoginScreen.route else AppScreens.HomeScreen.route
 
         NavHost(
             navController = navController,
             startDestination = startDest
         ) {
-            // --- Pantallas de Autenticación ---
+            // ... (Pantallas de Autenticación y Core se mantienen igual) ...
+
             composable(route = AppScreens.LoginScreen.route) {
                 LoginScreen(navController = navController)
             }
             composable(route = AppScreens.RegisterScreen.route) {
                 RegisterScreen(navController = navController)
             }
-
-            // --- Pantallas Principales ---
             composable(route = AppScreens.HomeScreen.route) {
                 HomeScreen(
                     navController = navController,
@@ -98,8 +92,6 @@ fun AppNavigation() {
                     viewModel = profileViewModel
                 )
             }
-
-            // --- Otras Pantallas ---
             composable(route = AppScreens.MapScreen.route) {
                 MapScreen(navController = navController)
             }
@@ -108,6 +100,15 @@ fun AppNavigation() {
             }
             composable(route = AppScreens.ContactScreen.route) {
                 ContactScreen(navController = navController)
+            }
+
+            // --- NUEVA RUTA DE RECETAS (Felipe) ---
+            composable(route = AppScreens.RecipesScreen.route) {
+                // Pasamos el cartViewModel para que la barra superior muestre el carrito
+                RecipeScreen(
+                    navController = navController,
+                    cartViewModel = cartViewModel
+                )
             }
         }
     }
