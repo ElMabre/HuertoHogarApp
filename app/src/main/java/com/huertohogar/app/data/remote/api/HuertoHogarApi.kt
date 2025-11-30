@@ -45,23 +45,22 @@ interface HuertoHogarApi {
 
     // --- Pedidos Controller ---
 
-    // Crear Pedido
     @POST("api/pedidos")
     suspend fun createPedido(
         @Header("Authorization") token: String,
         @Body request: PedidoRequestDto
     ): Response<PedidoResponseDto>
 
-    // Ver Mis Pedidos (Corregido: ruta api/ y tipo PedidoResponseDto)
+    // AGREGAR ESTO: Obtener mis pedidos
     @GET("api/pedidos/mis-pedidos")
-    suspend fun getMisPedidos(
+    suspend fun getMyPedidos(
         @Header("Authorization") token: String
     ): Response<List<PedidoResponseDto>>
 
-    // Cancelar Pedido (Corregido: ruta api/)
+    // AGREGAR ESTO: Cancelar pedido
     @DELETE("api/pedidos/{id}")
-    suspend fun cancelarPedido(
+    suspend fun cancelPedido(
         @Header("Authorization") token: String,
-        @Path("id") idPedido: Long
+        @Path("id") id: Long
     ): Response<Void>
 }

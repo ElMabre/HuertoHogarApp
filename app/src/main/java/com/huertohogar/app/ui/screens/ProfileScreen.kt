@@ -36,7 +36,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.huertohogar.app.navigation.AppScreens
 import com.huertohogar.app.ui.components.HuertoTopAppBar
 import com.huertohogar.app.utils.ChileLocations
 import com.huertohogar.app.viewmodel.ProfileViewModel
@@ -297,7 +296,7 @@ fun ProfileScreen(
             OutlinedButton(
                 onClick = {
                     viewModel.onLogout {
-                        navController.navigate(AppScreens.LoginScreen.route) {
+                        navController.navigate(com.huertohogar.app.navigation.AppScreens.LoginScreen.route) {
                             popUpTo(0) { inclusive = true }
                         }
                     }
@@ -320,11 +319,16 @@ fun ProfileScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         showImageSourceDialog = false
-                        // 1. Crear archivo temporal para la foto
-                        val uri = context.createImageUri()
-                        tempCameraUri = uri
-                        // 2. Lanzar cámara
-                        cameraLauncher.launch(uri)
+                        // MODIFICACIÓN: Try-Catch para prevenir cierre de la app si falla el FileProvider
+                        try {
+                            // 1. Crear archivo temporal para la foto (usando cacheDir)
+                            val uri = context.createImageUri()
+                            tempCameraUri = uri
+                            // 2. Lanzar cámara
+                            cameraLauncher.launch(uri)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error al abrir cámara: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
                     }) {
                         Icon(Icons.Default.CameraAlt, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
@@ -349,18 +353,19 @@ fun ProfileScreen(
     }
 }
 
-// Función de extensión para crear URI temporal (Necesaria para la cámara)
+
 fun Context.createImageUri(): Uri {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val imageFileName = "JPEG_" + timeStamp + "_"
     val image = File.createTempFile(
         imageFileName,
         ".jpg",
-        externalCacheDir // Usamos cache externo para compartir con la app de cámara
+        cacheDir
     )
+
     return FileProvider.getUriForFile(
         this,
-        "com.huertohogar.app.provider", // Debe coincidir con authorities en AndroidManifest
+        "com.huertohogar.app.provider",
         image
     )
 }
