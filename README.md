@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Asignatura:</b> Desarrollo de Aplicaciones Móviles (DSY1105) · <b>Duoc UC</b><br>
-  <b>Docente:</b> [Nombre del Docente]<br>
+  <b>Docente:</b> Miguel Acevedo<br>
   <b>Integrantes:</b> Matias Guzman, Felipe Quezada, Danilo Celis
 </p>
 
@@ -92,4 +92,5 @@ Captura de pantalla de Android Studio confirmando la generación correcta del `a
 ---
 <p align="center">
   Desarrollado para Evaluación Parcial 4 - 2025
+
 </p>
