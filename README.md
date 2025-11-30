@@ -28,7 +28,7 @@ El sistema backend de HuertoHogar está desplegado en la nube utilizando **Amazo
 * **Base de Datos:** MySQL (Relacional).
 
 ### Endpoints y Conexión
-[cite_start]La aplicación Android se conecta a la **IP Pública**: `http://18.211.31.168/`[cite: 1740].
+La aplicación Android se conecta a la **IP Pública**: `http://18.211.31.168/`.
 
 Nginx redirige el tráfico interno a los siguientes microservicios:
 
@@ -40,7 +40,7 @@ Nginx redirige el tráfico interno a los siguientes microservicios:
 | **Usuarios** | `/api/usuarios` | `:8081` | Actualización de perfil. |
 
 ### API Externa
-[cite_start]Adicionalmente, la aplicación consume la API pública **TheMealDB** para ofrecer una sección de "Recetas del Mundo", integrando contenido externo sin interferir con los servicios propios[cite: 1729].
+Adicionalmente, la aplicación consume la API pública **TheMealDB** para ofrecer una sección de "Recetas del Mundo", integrando contenido externo sin interferir con los servicios propios.
 
 ## 3. Funcionalidades Clave
 
@@ -70,19 +70,24 @@ Nginx redirige el tráfico interno a los siguientes microservicios:
 3.  **Sincronizar Gradle:** Esperar a que se descarguen las dependencias.
 4.  **Ejecutar:** Seleccionar un emulador o dispositivo físico (Min SDK 26) y presionar "Run".
     * *Nota:* Asegúrese de tener conexión a internet para cargar los datos del EC2 y los mapas.
+      
+## 6. Pasos para Ejecutar desde Android
+1.Descargar e instalar la apk de HuertoHogar
+2.Permitir instalacion sin escaneo de seguridad 
+3.Iniciar la aplicacion e iniciar sesion o continuar con el registro de la cuenta.
 
-## 6. Evidencia de Entrega (APK Firmado)
+## 7. Evidencia de Entrega (APK Firmado)
 
 El proyecto ha sido configurado para generar un **APK firmado** en modo `release` utilizando un Keystore seguro.
 
-### 6.1 Configuración del Keystore (.jks)
+### 7.1 Configuración del Keystore (.jks)
 El archivo `huertohogar-key.jks` se encuentra en la raíz del módulo `app`, configurado en el `build.gradle.kts`.
 
 <p align="center">
   <img src="https://i.ibb.co/hFFkgXyg/archivo-jks.png" width="600" alt="Ubicación del archivo JKS en el proyecto">
 </p>
 
-### 6.2 Generación Exitosa del APK
+### 7.2 Generación Exitosa del APK
 Captura de pantalla de Android Studio confirmando la generación correcta del `app-release.apk`.
 
 <p align="center">
@@ -94,3 +99,4 @@ Captura de pantalla de Android Studio confirmando la generación correcta del `a
   Desarrollado para Evaluación Parcial 4 - 2025
 
 </p>
+
