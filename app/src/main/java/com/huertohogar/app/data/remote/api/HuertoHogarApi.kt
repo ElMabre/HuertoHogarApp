@@ -10,6 +10,7 @@ import com.huertohogar.app.data.remote.model.UserUpdateDto
 import com.huertohogar.app.data.remote.model.UsuarioDto
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -43,10 +44,24 @@ interface HuertoHogarApi {
     suspend fun getProductoBySku(@Path("sku") sku: String): Response<ProductDto>
 
     // --- Pedidos Controller ---
-    // Endpoint para enviar un nuevo pedido al sistema. Requiere autenticación.
+
+    // Crear Pedido
     @POST("api/pedidos")
     suspend fun createPedido(
         @Header("Authorization") token: String,
         @Body request: PedidoRequestDto
     ): Response<PedidoResponseDto>
+
+    // Ver Mis Pedidos (Corregido: ruta api/ y tipo PedidoResponseDto)
+    @GET("api/pedidos/mis-pedidos")
+    suspend fun getMisPedidos(
+        @Header("Authorization") token: String
+    ): Response<List<PedidoResponseDto>>
+
+    // Cancelar Pedido (Corregido: ruta api/)
+    @DELETE("api/pedidos/{id}")
+    suspend fun cancelarPedido(
+        @Header("Authorization") token: String,
+        @Path("id") idPedido: Long
+    ): Response<Void>
 }

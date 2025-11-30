@@ -14,16 +14,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.annotations.VisibleForTesting
 
 /**
  * ViewModel para gestionar el estado y la lógica del carrito de compras.
- * Ahora incluye la lógica para confirmar el pedido (Checkout) conectándose al backend.
  */
 class CartViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Dependencias necesarias
-    private val sessionManager = SessionManager(application)
-    private val orderRepository = OrderRepository()
+    // CAMBIO: Hacemos estas variables accesibles para los Tests
+    @VisibleForTesting
+    var sessionManager = SessionManager(application)
+
+    @VisibleForTesting
+    var orderRepository = OrderRepository()
 
     private val _uiState = MutableStateFlow(CartUiState())
     val uiState: StateFlow<CartUiState> = _uiState.asStateFlow()
@@ -75,19 +78,15 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- Lógica de Checkout (Conexión con Backend) ---
 
-    /**
-     * Inicia el proceso de compra enviando los datos al servidor.
-     */
     fun realizarPedido() {
         val currentState = _uiState.value
         if (currentState.items.isEmpty()) return
 
         viewModelScope.launch {
-            // 1. Iniciar carga
             _uiState.update { it.copy(isLoading = true, checkoutError = null, checkoutSuccess = false) }
 
             try {
-                // 2. Obtener Token (necesario para el endpoint protegido)
+                // Obtenemos el token desde el SessionManager (que puede ser mockeado)
                 val token = sessionManager.authToken.first()
 
                 if (token.isNullOrBlank()) {
@@ -97,8 +96,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                // 3. Llamar al repositorio
-                // Usamos el total calculado en el UI State (incluye envío si aplica)
+                // Llamamos al repositorio (que puede ser mockeado)
                 val response = orderRepository.createOrder(
                     token = token,
                     cartItems = currentState.items,
@@ -106,16 +104,14 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 )
 
                 if (response.isSuccessful) {
-                    // 4. Éxito: Limpiamos el carrito y marcamos success
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             checkoutSuccess = true,
-                            items = emptyList() // Vaciamos el carrito local
+                            items = emptyList()
                         )
                     }
                 } else {
-                    // 5. Error del servidor (ej: sin stock)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -125,7 +121,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
             } catch (e: Exception) {
-                // 6. Error de red o inesperado
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -136,9 +131,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Resetea los estados de éxito/error para que no se muestren diálogos repetidos al volver a la pantalla.
-     */
     fun resetCheckoutStatus() {
         _uiState.update { it.copy(checkoutSuccess = false, checkoutError = null) }
     }

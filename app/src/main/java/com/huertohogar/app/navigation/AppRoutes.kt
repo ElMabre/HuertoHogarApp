@@ -25,8 +25,7 @@ sealed class AppScreens(val route: String) {
     object AboutUsScreen : AppScreens("about_us_screen")
     object ContactScreen : AppScreens("contact_screen")
 
-    // --- NUEVA RUTA (Felipe) ---
-    // Definimos la ruta para la pantalla de recetas.
-    // No requiere argumentos porque tiene un buscador interno.
     object RecipesScreen : AppScreens("recipes_screen")
+
+    object OrderHistoryScreen : AppScreens("order_history_screen")
 }

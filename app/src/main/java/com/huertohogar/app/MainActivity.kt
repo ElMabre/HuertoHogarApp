@@ -13,7 +13,6 @@ import com.huertohogar.app.ui.theme.HuertoHogarAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Habilitamos el modo Edge-to-Edge ANTES de llamar a super.onCreate
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {

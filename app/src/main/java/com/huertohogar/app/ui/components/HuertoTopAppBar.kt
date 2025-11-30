@@ -91,6 +91,15 @@ fun HuertoTopAppBar(
                     }
                 )
 
+                // --- NUEVA OPCIÓN: MIS PEDIDOS ---
+                DropdownMenuItem(
+                    text = { Text("Mis Pedidos") },
+                    onClick = {
+                        menuExpanded = false
+                        navController.navigate(AppScreens.OrderHistoryScreen.route)
+                    }
+                )
+
                 // Productos
                 DropdownMenuItem(
                     text = { Text("Productos") },
@@ -100,7 +109,7 @@ fun HuertoTopAppBar(
                     }
                 )
 
-                // --- NUEVA OPCIÓN: RECETAS ---
+                // Recetas
                 DropdownMenuItem(
                     text = { Text("Recetas") },
                     onClick = {

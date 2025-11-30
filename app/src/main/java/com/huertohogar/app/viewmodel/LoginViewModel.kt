@@ -2,7 +2,6 @@ package com.huertohogar.app.viewmodel
 
 import android.app.Application
 import android.util.Log
-import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.huertohogar.app.data.local.datastorage.SessionManager
@@ -15,17 +14,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.annotations.VisibleForTesting
 
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
-    // Se instancia con el contexto de la aplicación
-    private val sessionManager = SessionManager(application)
-    private val authRepository = AuthRepository()
+    @VisibleForTesting
+    var sessionManager = SessionManager(application)
+
+    @VisibleForTesting
+    var authRepository = AuthRepository()
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    // TAG para filtrar en Logcat
     private val TAG = "LoginViewModel"
 
     fun onEmailChange(email: String) {
@@ -55,20 +56,16 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onLoginClicked(onLoginSuccess: () -> Unit) {
-        // 1. Validar campos locales
         if (!validarFormularioLocal()) {
             return
         }
 
-        // 2. Iniciar carga
         _uiState.update { it.copy(isLoading = true, loginError = null) }
 
         viewModelScope.launch {
             try {
-                // LOG: Aviso de inicio
                 Log.d(TAG, "Intentando login con: ${_uiState.value.email}")
 
-                // 3. Llamada al Backend
                 val request = LoginRequestDto(
                     email = _uiState.value.email,
                     password = _uiState.value.password
@@ -78,23 +75,16 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful && response.body() != null) {
                     val authData = response.body()!!
 
-                    // LOG: Éxito
                     Log.i(TAG, "Login exitoso. Guardando sesión...")
 
-                    // 4. Guardar sesión COMPLETA (Email, Token e ID)
                     sessionManager.saveUserEmail(authData.usuario.email)
                     sessionManager.saveAuthToken(authData.token)
                     sessionManager.saveUserId(authData.usuario.id)
 
-                    // También podrías guardar la imagen si viniera del backend
-                    // sessionManager.saveProfileImage(...)
-
                     _uiState.update { it.copy(isLoading = false) }
                     onLoginSuccess()
                 } else {
-                    // LOG: Error del servidor
                     Log.e(TAG, "Error del servidor: ${response.code()} ${response.message()}")
-
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -103,15 +93,11 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             } catch (e: Exception) {
-                // LOG: Error Crítico (Red, Timeout, etc)
-                // Esto hará que salga en rojo en tu Logcat
                 Log.e(TAG, "Error CRÍTICO en Login", e)
                 e.printStackTrace()
-
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        // Mostramos el mensaje técnico entre paréntesis para que sepas qué pasó
                         loginError = "Error de conexión: ${e.message}"
                     )
                 }
@@ -130,6 +116,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun isValidEmail(email: String): Boolean {
-        return email.isNotBlank() && Patterns.EMAIL_ADDRESS.matcher(email).matches()
+        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
+        return email.isNotBlank() && email.matches(emailRegex)
     }
 }

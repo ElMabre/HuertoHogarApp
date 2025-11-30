@@ -1,7 +1,7 @@
 package com.huertohogar.app.viewmodel
 
 import android.app.Application
-import android.util.Patterns
+// import android.util.Patterns <-- ELIMINAMOS ESTA LÍNEA
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.huertohogar.app.data.local.datastorage.SessionManager
@@ -17,11 +17,13 @@ import kotlinx.coroutines.launch
 
 class RegisterViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val sessionManager = SessionManager(application)
-    private val authRepository = AuthRepository()
+    var sessionManager = SessionManager(application)
+    var authRepository = AuthRepository()
 
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
+
+    private val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
 
     // --- Actualización de campos ---
 
@@ -38,7 +40,6 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onRegionSelected(region: String) {
-        // Al cambiar región, reseteamos la comuna
         _uiState.update { it.copy(region = region, comuna = "", errors = it.errors.copy(region = null)) }
     }
 
@@ -83,7 +84,6 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
 
                 if (response.isSuccessful && response.body() != null) {
                     val authData = response.body()!!
-                    // Guardamos la sesión automáticamente tras el registro
                     sessionManager.saveUserEmail(authData.usuario.email)
 
                     _uiState.update { it.copy(isLoading = false) }
@@ -109,6 +109,9 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
 
     private fun validarFormulario(): Boolean {
         val state = _uiState.value
+
+        val isEmailValid = state.email.isNotBlank() && emailPattern.matches(state.email)
+
         val errors = RegisterErrorState(
             nombre = if (state.nombre.isBlank()) "El nombre es obligatorio" else null,
             apellido = if (state.apellido.isBlank()) "El apellido es obligatorio" else null,
@@ -116,7 +119,7 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
             region = if (state.region.isBlank()) "Seleccione una región" else null,
             comuna = if (state.comuna.isBlank()) "Seleccione una comuna" else null,
             direccion = if (state.direccion.isBlank()) "La dirección es obligatoria" else null,
-            email = if (!Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) "Email inválido" else null,
+            email = if (!isEmailValid) "Email inválido" else null,
             password = if (state.password.length < 6) "Mínimo 6 caracteres" else null
         )
 

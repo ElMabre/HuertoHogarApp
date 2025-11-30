@@ -18,6 +18,11 @@ okhttp = "4.12.0"
 mapsCompose = "4.4.1"
 playServicesMaps = "19.0.0"
 
+# --- VERSIONES DE TESTING ---
+mockk = "1.13.10"
+kotlinxCoroutinesTest = "1.8.0"
+
+
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +52,10 @@ squareup-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref
 # Google Maps
 google-maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
 google-play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+
+# --- LIBRERÍAS DE TESTING ---
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

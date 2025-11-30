@@ -23,10 +23,10 @@ import com.huertohogar.app.ui.screens.ContactScreen
 import com.huertohogar.app.ui.screens.HomeScreen
 import com.huertohogar.app.ui.screens.LoginScreen
 import com.huertohogar.app.ui.screens.MapScreen
+import com.huertohogar.app.ui.screens.OrderHistoryScreen // Importante importar la nueva pantalla
 import com.huertohogar.app.ui.screens.ProductDetailScreen
 import com.huertohogar.app.ui.screens.ProductsScreen
 import com.huertohogar.app.ui.screens.ProfileScreen
-// Importamos la nueva pantalla de Recetas
 import com.huertohogar.app.ui.screens.RecipeScreen
 import com.huertohogar.app.ui.screens.RegisterScreen
 import com.huertohogar.app.viewmodel.CartViewModel
@@ -54,8 +54,6 @@ fun AppNavigation() {
             navController = navController,
             startDestination = startDest
         ) {
-            // ... (Pantallas de Autenticación y Core se mantienen igual) ...
-
             composable(route = AppScreens.LoginScreen.route) {
                 LoginScreen(navController = navController)
             }
@@ -99,13 +97,14 @@ fun AppNavigation() {
                 AboutUsScreen(navController = navController)
             }
             composable(route = AppScreens.ContactScreen.route) {
-                ContactScreen(navController = navController)
+                ContactScreen(navController = navController, cartViewModel = cartViewModel)
+            }
+            composable(route = AppScreens.RecipesScreen.route) {
+                RecipeScreen(navController = navController, cartViewModel = cartViewModel)
             }
 
-            // --- NUEVA RUTA DE RECETAS (Felipe) ---
-            composable(route = AppScreens.RecipesScreen.route) {
-                // Pasamos el cartViewModel para que la barra superior muestre el carrito
-                RecipeScreen(
+            composable(route = AppScreens.OrderHistoryScreen.route) {
+                OrderHistoryScreen(
                     navController = navController,
                     cartViewModel = cartViewModel
                 )

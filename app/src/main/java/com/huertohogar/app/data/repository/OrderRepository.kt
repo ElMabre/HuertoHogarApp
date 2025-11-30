@@ -1,45 +1,38 @@
 package com.huertohogar.app.data.repository
 
 import com.huertohogar.app.data.remote.RetrofitClient
-import com.huertohogar.app.data.remote.model.DetalleRequestDto
 import com.huertohogar.app.data.remote.model.PedidoRequestDto
 import com.huertohogar.app.data.remote.model.PedidoResponseDto
-import com.huertohogar.app.model.CartItem
 import retrofit2.Response
 
 class OrderRepository {
-
+    // Usamos la API centralizada
     private val api = RetrofitClient.orderApi
 
     /**
-     * Envía un pedido al servidor.
-     * @param token Token de autenticación del usuario (JWT).
-     * @param cartItems Lista de items que están en el carrito.
-     * @param total Monto total de la compra.
+     * Crea un nuevo pedido.
      */
-    suspend fun createOrder(token: String, cartItems: List<CartItem>, total: Double): Response<PedidoResponseDto> {
+    suspend fun createOrder(token: String, order: PedidoRequestDto): Response<PedidoResponseDto> {
+        val bearerToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        // CORRECCIÓN: El método en la API se llama 'createPedido', no 'createOrder'
+        return api.createPedido(bearerToken, order)
+    }
 
-        // 1. Transformación de Datos:
-        // Convertimos los objetos de dominio 'CartItem' a los DTOs que espera la API ('DetalleRequestDto').
-        // Aquí es donde usamos el 'databaseId' (Long) en lugar del 'id' (String/SKU).
-        val detallesDto = cartItems.map { item ->
-            DetalleRequestDto(
-                productoId = item.producto.databaseId, // CRÍTICO: ID numérico para la BD
-                cantidad = item.cantidad,
-                precio = item.producto.precio
-            )
-        }
+    /**
+     * Obtiene el historial de pedidos del usuario.
+     */
+    suspend fun getMyOrders(token: String): Response<List<PedidoResponseDto>> {
+        val bearerToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        // El método en la API se llama 'getMisPedidos'
+        return api.getMisPedidos(bearerToken)
+    }
 
-        // 2. Construcción del Request
-        val request = PedidoRequestDto(
-            total = total,
-            productos = detallesDto
-        )
-
-        // 3. Llamada a la API
-        // Aseguramos que el token tenga el prefijo correcto
-        val authToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
-
-        return api.createPedido(authToken, request)
+    /**
+     * Cancela un pedido existente.
+     */
+    suspend fun cancelOrder(token: String, orderId: Long): Response<Void> {
+        val bearerToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
+        // El método en la API se llama 'cancelarPedido'
+        return api.cancelarPedido(bearerToken, orderId)
     }
 }
