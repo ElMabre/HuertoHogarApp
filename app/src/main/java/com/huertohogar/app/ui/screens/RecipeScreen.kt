@@ -31,6 +31,8 @@ import com.huertohogar.app.ui.components.HuertoTopAppBar
 import com.huertohogar.app.viewmodel.CartViewModel
 import com.huertohogar.app.viewmodel.RecipeViewModel
 
+// Pantalla principal donde buscamos recetas.
+// Aquí junto todo: la barra de búsqueda, la lista de resultados y el aviso de carga.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeScreen(
@@ -38,16 +40,19 @@ fun RecipeScreen(
     recipeViewModel: RecipeViewModel = viewModel(),
     cartViewModel: CartViewModel
 ) {
+    // Saco el estado del ViewModel para saber si está cargando o si ya hay recetas listas.
     val uiState by recipeViewModel.uiState.collectAsState()
+
+    // Variable para guardar lo que escribo en el buscador antes de darle al botón.
     var searchQuery by remember { mutableStateOf("") }
 
-    // --- LÓGICA DEL DIÁLOGO ---
-    // Si 'selectedRecipe' tiene datos, mostramos el Pop-up automáticamente.
+    // Lógica para mostrar la ventana flotante (Pop-up).
+    // Si hay una receta seleccionada en el estado, dibujo el diálogo. Si no, no se ve nada.
     if (uiState.selectedRecipe != null) {
         RecipeDetailDialog(
             recipe = uiState.selectedRecipe!!,
             onDismiss = {
-                // Al cerrar, limpiamos el estado para volver a la lista
+                // Cuando cierro el diálogo, limpio la receta seleccionada para que desaparezca la ventana.
                 recipeViewModel.clearSelectedRecipe()
             }
         )
@@ -69,7 +74,8 @@ fun RecipeScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            // Barra de búsqueda
+            // Campo de texto para buscar.
+            // Cuando le doy a la lupa, llamo al ViewModel para que busque los datos.
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -89,6 +95,8 @@ fun RecipeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Aquí decido qué mostrar según cómo va la carga:
+            // Un círculo girando, un mensaje de error, o la lista si todo salió bien.
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     uiState.isLoading -> {
@@ -110,7 +118,8 @@ fun RecipeScreen(
                         )
                     }
                     else -> {
-                        // Grilla de Resultados
+                        // Lista de recetas en forma de rejilla (cuadritos).
+                        // Uso 'Adaptive' para que el tamaño de las columnas se ajuste solo al móvil.
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 150.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -120,7 +129,7 @@ fun RecipeScreen(
                                 RecipeCard(
                                     recipe = recipe,
                                     onClick = {
-                                        // Al hacer clic, pedimos el detalle al ViewModel
+                                        // Si toco una tarjeta, pido los detalles para abrir el diálogo.
                                         recipeViewModel.getRecipeDetail(recipe.id)
                                     }
                                 )
@@ -133,6 +142,8 @@ fun RecipeScreen(
     }
 }
 
+// Diseño de cada tarjetita de la lista.
+// Es simple: solo muestra la foto y el nombre de la receta.
 @Composable
 fun RecipeCard(
     recipe: RecipeDto,
@@ -165,9 +176,8 @@ fun RecipeCard(
     }
 }
 
-/**
- * Componente nuevo: El Pop-up con las instrucciones.
- */
+// Ventana flotante (Dialog) con los detalles.
+// Le puse un scroll porque a veces las instrucciones son muy largas y no caben en la pantalla.
 @Composable
 fun RecipeDetailDialog(
     recipe: RecipeDetailDto,
@@ -178,12 +188,12 @@ fun RecipeDetailDialog(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f) // Ocupa el 85% de la altura de la pantalla
+                .fillMaxHeight(0.85f) // Que ocupe casi toda la altura para que se vea bien
         ) {
             Column(
                 modifier = Modifier
                     .padding(16.dp)
-                    .verticalScroll(rememberScrollState()) // Permite scroll si el texto es largo
+                    .verticalScroll(rememberScrollState()) // Esto permite bajar si hay mucho texto
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)

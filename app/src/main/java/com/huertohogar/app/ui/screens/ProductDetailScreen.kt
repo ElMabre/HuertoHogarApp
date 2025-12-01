@@ -35,10 +35,13 @@ import com.huertohogar.app.viewmodel.CartViewModel
 import com.huertohogar.app.viewmodel.ProductDetailViewModel
 import java.util.Locale
 
-// Definimos el Locale para Chile (CLP) de la forma moderna
-// para no usar el constructor obsoleto.
+// Configuración global para formateo de moneda.
+// Se define fuera de los composables para evitar recrear el objeto constantemente.
 private val chileLocale: Locale = Locale.forLanguageTag("es-CL")
 
+// Pantalla "Contenedor" (Stateful).
+// Su responsabilidad es orquestar la lógica: obtener datos del ViewModel, gestionar estados de carga
+// y conectar eventos (como añadir al carrito) con la lógica de negocio.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
@@ -47,11 +50,17 @@ fun ProductDetailScreen(
     cartViewModel: CartViewModel,
     productDetailViewModel: ProductDetailViewModel = viewModel()
 ) {
+    // Observamos los estados de ambos ViewModels.
+    // 'detailUiState' maneja la carga del producto actual.
+    // 'cartUiState' se necesita para actualizar el contador del carrito en la barra superior (Badge).
     val detailUiState by productDetailViewModel.uiState.collectAsState()
-
     val cartUiState by cartViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // --- EFECTO SECUNDARIO (Side Effect) ---
+    // 'LaunchedEffect' es vital aquí. Ejecuta la llamada a la API (loadProductDetails)
+    // SOLO cuando entra a la pantalla o si el 'productId' cambia.
+    // Sin esto, la llamada se ejecutaría infinitamente en cada recomposición (redibujado).
     LaunchedEffect(productId) {
         productDetailViewModel.loadProductDetails(productId)
     }
@@ -71,7 +80,8 @@ fun ProductDetailScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
-
+                // Icono del carrito con Badge (notificación roja).
+                // Al observar 'cartUiState', el número se actualiza en tiempo real incluso desde esta pantalla.
                 actions = {
                     IconButton(onClick = { navController.navigate(AppScreens.CartScreen.route) }) {
                         BadgedBox(
@@ -96,6 +106,8 @@ fun ProductDetailScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Manejo de Estados de UI (Loading / Error / Success).
+            // Muestra una interfaz diferente según la respuesta asíncrona del ViewModel.
             when {
                 detailUiState.isLoading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -108,6 +120,8 @@ fun ProductDetailScreen(
                     )
                 }
                 detailUiState.producto != null -> {
+                    // Delegamos el dibujo del contenido a un composable "Puro".
+                    // Pasamos solo los datos necesarios y una lambda para el evento de click.
                     ProductDetailsContent(
                         producto = detailUiState.producto!!,
                         onAddToCartClick = {
@@ -121,18 +135,22 @@ fun ProductDetailScreen(
     }
 }
 
-@SuppressLint("DefaultLocale") // Lo mantenemos por si acaso, aunque ya usamos Locale explícito
+// Componente de Contenido .
+@SuppressLint("DefaultLocale")
 @Composable
 private fun ProductDetailsContent(
     producto: Producto,
     onAddToCartClick: () -> Unit
 ) {
+    // Usamos 'verticalScroll' porque la descripción del producto puede ser larga
+    // y debe ser leíble en pantallas pequeñas sin cortar el botón de compra.
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
+        // Carga asíncrona de imágenes optimizada (Coil).
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(producto.imagenUrl)
@@ -166,8 +184,8 @@ private fun ProductDetailsContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Formateo de moneda CLP usando el Locale definido arriba.
             Text(
-                // ¡ARREGLO! Usamos el Locale de Chile moderno
                 text = "$${String.format(chileLocale, "%,.0f", producto.precio)} CLP / ${producto.unidad}",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary,
@@ -192,6 +210,8 @@ private fun ProductDetailsContent(
         )
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Botón de acción principal.
+        // Se deshabilita visual y funcionalmente si no hay stock (Lógica de UI simple).
         Button(
             onClick = onAddToCartClick,
             modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -204,7 +224,9 @@ private fun ProductDetailsContent(
     }
 }
 
-
+// Preview para desarrollo.
+// Utiliza datos falsos (Mock) para renderizar la UI en Android Studio
+// sin necesidad de ejecutar el backend ni la navegación.
 @Preview(showBackground = true)
 @Composable
 fun ProductDetailScreenPreview() {

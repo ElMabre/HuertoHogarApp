@@ -17,22 +17,32 @@ import kotlinx.coroutines.launch
 import org.jetbrains.annotations.VisibleForTesting
 
 /**
- * ViewModel para gestionar el estado y la lógica del carrito de compras.
+ * ViewModel que actúa como única fuente de verdad para el carrito.
+ * Hereda de AndroidViewModel para tener acceso al contexto (Application),
+ * necesario aquí para inicializar SessionManager (DataStore) de forma sencilla.
  */
 class CartViewModel(application: Application) : AndroidViewModel(application) {
 
-    // CAMBIO: Hacemos estas variables accesibles para los Tests
+    // Dependencias de datos y red.
+    // Se marcan con @VisibleForTesting y var para poder inyectar "fakes" o mocks
+    // en los tests unitarios sin usar un framework complejo de inyección de dependencias.
     @VisibleForTesting
     var sessionManager = SessionManager(application)
 
     @VisibleForTesting
     var orderRepository = OrderRepository()
 
+    // Patrón de Estado UI (StateFlow).
+    // _uiState es mutable y privado para que solo este ViewModel pueda modificarlo.
+    // uiState es público y de solo lectura para que la Vista (UI) solo pueda "observar" cambios.
     private val _uiState = MutableStateFlow(CartUiState())
     val uiState: StateFlow<CartUiState> = _uiState.asStateFlow()
 
     // --- Funciones de Gestión del Carrito (Local) ---
 
+    // Lógica para añadir items.
+    // Se usa .update para modificar el flujo de forma segura (hilo-segura).
+    // Usamos .copy() porque el estado en Compose debe ser inmutable para que la UI se repinte correctamente.
     fun addToCart(producto: Producto) {
         _uiState.update { currentState ->
             val items = currentState.items.toMutableList()
@@ -40,7 +50,6 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
             if (existingItemIndex != -1) {
                 val existingItem = items[existingItemIndex]
-                // TODO: Validar stock máximo aquí en el futuro
                 items[existingItemIndex] = existingItem.copy(cantidad = existingItem.cantidad + 1)
             } else {
                 items.add(CartItem(producto = producto, cantidad = 1))
@@ -56,6 +65,9 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Actualización de cantidad con validación.
+    // Centraliza la lógica: si la cantidad baja a 0, reutiliza la función de eliminar
+    // para no duplicar código.
     fun updateQuantity(productId: String, newQuantity: Int) {
         if (newQuantity <= 0) {
             removeFromCart(productId)
@@ -78,6 +90,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- Lógica de Checkout (Conexión con Backend) ---
 
+    // Operación asíncrona principal.
+    // Usa viewModelScope para lanzar la corrutina, asegurando que si el usuario sale de la pantalla,
+    // el proceso se cancele automáticamente para no consumir recursos.
+    // Maneja los 3 estados de la UI: Cargando -> Éxito o Error.
     fun realizarPedido() {
         val currentState = _uiState.value
         if (currentState.items.isEmpty()) return
@@ -86,7 +102,8 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(isLoading = true, checkoutError = null, checkoutSuccess = false) }
 
             try {
-                // Obtenemos el token desde el SessionManager (que puede ser mockeado)
+                // Flow.first() suspende la corrutina hasta obtener el valor actual del token
+                // almacenado en disco (DataStore).
                 val token = sessionManager.authToken.first()
 
                 if (token.isNullOrBlank()) {
@@ -96,7 +113,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
 
-                // Llamamos al repositorio (que puede ser mockeado)
+                // Llamada a red bloqueante (suspend function).
                 val response = orderRepository.createOrder(
                     token = token,
                     cartItems = currentState.items,
@@ -108,7 +125,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                         it.copy(
                             isLoading = false,
                             checkoutSuccess = true,
-                            items = emptyList()
+                            items = emptyList() // Limpiamos el carrito tras éxito
                         )
                     }
                 } else {
@@ -131,6 +148,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Limpieza de eventos de un solo uso.
     fun resetCheckoutStatus() {
         _uiState.update { it.copy(checkoutSuccess = false, checkoutError = null) }
     }

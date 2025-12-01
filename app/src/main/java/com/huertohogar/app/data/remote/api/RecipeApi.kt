@@ -7,19 +7,19 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 /**
- * Interfaz actualizada con el endpoint para obtener detalles.
+ * Interfaz que define los endpoints del API de recetas (TheMealDB).
+ * Usamos Retrofit para hacer las peticiones HTTP.
  */
 interface RecipeApi {
 
-    // 1. LISTA: Buscar por ingrediente (Ya lo teníamos)
+    // 1. LISTA: Buscar recetas según un ingrediente.
     @GET("filter.php")
     suspend fun getRecipesByIngredient(
         @Query("i") ingredient: String
     ): Response<RecipeListResponse>
 
-    // 2. DETALLE: Buscar receta por ID (NUEVO)
-    // Usamos este endpoint para obtener las instrucciones completas cuando el usuario hace clic.
-    // Ejemplo: .../lookup.php?i=52772
+    // 2. DETALLE: Obtiene los datos completos de una receta por su ID.
+    // Este endpoint devuelve instrucciones, ingredientes detallados, imágenes, etc.
     @GET("lookup.php")
     suspend fun getRecipeById(
         @Query("i") id: String

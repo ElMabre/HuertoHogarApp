@@ -24,7 +24,7 @@ android {
     signingConfigs {
         create("release") {
 
-            storeFile = file("huertohogar-key.jks")
+            storeFile = file("keystore.jks")
             storePassword = "252532"
             keyAlias = "huertohogar-key"
             keyPassword = "252532"

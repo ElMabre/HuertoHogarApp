@@ -44,6 +44,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// Pantalla de Perfil de Usuario.
+// Gestiona la visualización y edición de datos personales, incluyendo la lógica compleja
+// de interacción con el sistema operativo para capturar fotos (Cámara/Galería).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -53,15 +56,19 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Estados para el diálogo de selección de imagen
+    // Estados locales para controlar la visibilidad de diálogos y menús desplegables (Dropdowns).
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
-
-    // Estado para los dropdowns
     var regionExpanded by remember { mutableStateOf(false) }
     var comunaExpanded by remember { mutableStateOf(false) }
 
-    // Launcher: Galería
+    // --- INTEGRACIÓN CON ACTIVITY RESULT API ---
+    // Reemplaza al antiguo 'startActivityForResult'.
+    // Permite obtener resultados de otras apps (Galería/Cámara) de forma asíncrona dentro de un Composable.
+
+
+
+    // 1. Contrato para Galería (Photo Picker nativo de Android).
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
@@ -69,7 +76,8 @@ fun ProfileScreen(
         }
     )
 
-    // Launcher: Cámara
+    // 2. Contrato para Cámara.
+    // Requiere pasarle una URI donde se guardará la foto antes de tomarla.
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
@@ -79,7 +87,9 @@ fun ProfileScreen(
         }
     )
 
-    // Efecto para mostrar mensajes Toast (Éxito o Error)
+    // Manejo de Feedback (Toasts).
+    // Se usa LaunchedEffect para mostrar mensajes solo cuando el estado cambia,
+    // evitando que el Toast se repita en cada recomposición de la pantalla.
     LaunchedEffect(uiState.successMessage, uiState.errorMessage) {
         if (uiState.successMessage != null) {
             Toast.makeText(context, uiState.successMessage, Toast.LENGTH_LONG).show()
@@ -95,9 +105,8 @@ fun ProfileScreen(
         topBar = {
             HuertoTopAppBar(
                 title = "Mi Perfil",
-                canNavigateBack = false, // Es pantalla principal
+                canNavigateBack = false,
                 navController = navController,
-                // Nota: Idealmente inyectar el CartViewModel en AppNavigation, aquí lo obtenemos temporalmente
                 cartViewModel = viewModel(modelClass = com.huertohogar.app.viewmodel.CartViewModel::class.java)
             )
         }
@@ -106,18 +115,19 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()) // Scroll vital para evitar ocultar campos con el teclado
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- SECCIÓN FOTO DE PERFIL ---
+            // --- AVATAR DE USUARIO ---
+            // Muestra la imagen actual o un placeholder si no existe.
+            // El Box permite superponer el botón de edición sobre la imagen.
             Box(
                 contentAlignment = Alignment.BottomEnd,
                 modifier = Modifier.size(140.dp)
             ) {
-                // Imagen
                 if (uiState.profileImageUri != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
@@ -148,7 +158,7 @@ fun ProfileScreen(
                         )
                     }
                 }
-                // Botón editar pequeño
+                // Botón flotante pequeño para indicar "Editar"
                 SmallFloatingActionButton(
                     onClick = { showImageSourceDialog = true },
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -165,7 +175,7 @@ fun ProfileScreen(
                 modifier = Modifier.padding(top = 12.dp, bottom = 24.dp)
             )
 
-            // --- FORMULARIO DE EDICIÓN ---
+            // --- FORMULARIO DE DATOS ---
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
@@ -181,7 +191,6 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    // Nombre y Apellido
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = uiState.nombre,
@@ -199,8 +208,10 @@ fun ProfileScreen(
                         )
                     }
 
-                    // --- SELECCIÓN DE REGIÓN Y COMUNA ---
-                    // Región
+                    // --- DROPDOWNS DEPENDIENTES (Región -> Comuna) ---
+                    // Se usa ExposedDropdownMenuBox para seguir los lineamientos de Material Design 3.
+
+                    // Selector de Región
                     ExposedDropdownMenuBox(
                         expanded = regionExpanded,
                         onExpandedChange = { regionExpanded = !regionExpanded }
@@ -208,7 +219,7 @@ fun ProfileScreen(
                         OutlinedTextField(
                             value = uiState.region,
                             onValueChange = {},
-                            readOnly = true,
+                            readOnly = true, // Es solo selección, no escritura
                             label = { Text("Región") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = regionExpanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
@@ -229,7 +240,8 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Comuna
+                    // Selector de Comuna
+                    // La lista 'comunasDisponibles' se recalcula dinámicamente según la región seleccionada.
                     val comunasDisponibles = ChileLocations.regionesYComunas[uiState.region] ?: emptyList()
                     ExposedDropdownMenuBox(
                         expanded = comunaExpanded,
@@ -241,6 +253,7 @@ fun ProfileScreen(
                             readOnly = true,
                             label = { Text("Comuna") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = comunaExpanded) },
+                            // Se deshabilita si no hay región seleccionada para evitar inconsistencias
                             enabled = uiState.region.isNotEmpty(),
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
@@ -260,7 +273,6 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Dirección
                     OutlinedTextField(
                         value = uiState.direccion,
                         onValueChange = { viewModel.onDireccionChange(it) },
@@ -272,7 +284,6 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Botón Guardar Cambios
                     Button(
                         onClick = { viewModel.saveChanges() },
                         modifier = Modifier.fillMaxWidth(),
@@ -292,7 +303,8 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.weight(1f))
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón Cerrar Sesión
+            // Lógica de Logout
+            // Limpia el stack de navegación para que el usuario no pueda volver atrás con el botón "Back".
             OutlinedButton(
                 onClick = {
                     viewModel.onLogout {
@@ -310,21 +322,20 @@ fun ProfileScreen(
             }
         }
 
-        // --- DIÁLOGO SELECCIÓN IMAGEN ---
+        // Modal para decidir origen de la imagen
         if (showImageSourceDialog) {
             AlertDialog(
                 onDismissRequest = { showImageSourceDialog = false },
                 title = { Text("Cambiar foto de perfil") },
                 text = { Text("Elige una opción:") },
                 confirmButton = {
+                    // Acción CÁMARA
                     TextButton(onClick = {
                         showImageSourceDialog = false
-                        // MODIFICACIÓN: Try-Catch para prevenir cierre de la app si falla el FileProvider
                         try {
-                            // 1. Crear archivo temporal para la foto (usando cacheDir)
+                            // Creamos URI temporal y lanzamos cámara
                             val uri = context.createImageUri()
                             tempCameraUri = uri
-                            // 2. Lanzar cámara
                             cameraLauncher.launch(uri)
                         } catch (e: Exception) {
                             Toast.makeText(context, "Error al abrir cámara: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -336,9 +347,9 @@ fun ProfileScreen(
                     }
                 },
                 dismissButton = {
+                    // Acción GALERÍA
                     TextButton(onClick = {
                         showImageSourceDialog = false
-                        // Lanzar Galería
                         galleryLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )
@@ -353,7 +364,9 @@ fun ProfileScreen(
     }
 }
 
-
+// Función de extensión utilitaria.
+// Crea un archivo temporal seguro y genera una URI usando 'FileProvider'.
+// Esto es obligatorio desde Android 7 (Nougat) para compartir archivos entre aplicaciones (tu app -> app de cámara).
 fun Context.createImageUri(): Uri {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val imageFileName = "JPEG_" + timeStamp + "_"
@@ -365,7 +378,7 @@ fun Context.createImageUri(): Uri {
 
     return FileProvider.getUriForFile(
         this,
-        "com.huertohogar.app.provider",
+        "com.huertohogar.app.provider", // Debe coincidir con el 'authorities' en AndroidManifest.xml
         image
     )
 }

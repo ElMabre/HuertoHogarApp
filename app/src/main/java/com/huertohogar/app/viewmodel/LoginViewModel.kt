@@ -16,19 +16,29 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.VisibleForTesting
 
+/**
+ * ViewModel para gestionar el inicio de sesión.
+ * Hereda de AndroidViewModel porque necesitamos el "Contexto" (Application)
+ * para poder guardar los datos de sesión en el móvil.
+ */
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
+    // Dependencias para guardar sesión y conectar a internet.
+    // Son 'var' y visibles para testing para poder sustituirlas por versiones falsas en las pruebas.
     @VisibleForTesting
     var sessionManager = SessionManager(application)
 
     @VisibleForTesting
     var authRepository = AuthRepository()
 
+    // Estado de la UI (StateFlow).
+    // _uiState es privado para modificarlo y uiState es público solo para lectura desde la Vista.
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     private val TAG = "LoginViewModel"
 
+    // Actualiza el email mientras el usuario escribe y limpia errores previos para mejorar la UX.
     fun onEmailChange(email: String) {
         _uiState.update { currentState ->
             currentState.copy(
@@ -40,6 +50,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Actualiza la contraseña y resetea cualquier error relacionado.
     fun onPasswordChange(password: String) {
         _uiState.update { currentState ->
             currentState.copy(
@@ -51,10 +62,15 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Cambia el estado de visibilidad de la contraseña (ojo ver/ocultar).
     fun onTogglePasswordVisibility() {
         _uiState.update { it.copy(passwordVisible = !it.passwordVisible) }
     }
 
+    // Proceso principal de Login.
+    // 1. Valida datos locales.
+    // 2. Lanza una corrutina (hilo secundario) para conectar con la API.
+    // 3. Si es exitoso, guarda la sesión y navega. Si falla, muestra el error.
     fun onLoginClicked(onLoginSuccess: () -> Unit) {
         if (!validarFormularioLocal()) {
             return
@@ -105,6 +121,8 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Comprueba formato de email y campos vacíos antes de molestar al servidor.
+    // Devuelve true si todo está correcto.
     private fun validarFormularioLocal(): Boolean {
         val state = _uiState.value
         val newErrors = LoginErrorState(
@@ -115,6 +133,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         return newErrors.email == null && newErrors.password == null
     }
 
+    // Helper simple con Regex para asegurar que parece un correo real.
     private fun isValidEmail(email: String): Boolean {
         val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
         return email.isNotBlank() && email.matches(emailRegex)

@@ -1,6 +1,5 @@
 package com.huertohogar.app.model
 
-
 /**
  * Representa un ítem individual dentro del carrito de compras.
  * Contiene la información del producto y la cantidad seleccionada.

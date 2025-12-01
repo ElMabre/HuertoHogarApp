@@ -26,18 +26,24 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 
+// Clase de pruebas unitarias para CartViewModel.
+// Su objetivo es verificar la lógica de negocio (cálculos, agregar/quitar items) y el flujo de datos
+// sin depender de la base de datos real ni de la red.
 @OptIn(ExperimentalCoroutinesApi::class)
 class CartViewModelTest {
 
     private lateinit var viewModel: CartViewModel
+
+    // Mocks: Objetos simulados que imitan el comportamiento de las dependencias reales.
+    // Usamos 'relaxed = true' para que no fallen si llamamos métodos no configurados explícitamente.
     private val mockOrderRepository = mockk<OrderRepository>(relaxed = true)
     private val mockSessionManager = mockk<SessionManager>(relaxed = true)
     private val mockApplication = mockk<Application>(relaxed = true)
 
-    // Dispatcher especial para pruebas
+    // necesario para controlar la ejecución de Corrutinas en los tests.
     private val testDispatcher = StandardTestDispatcher()
 
-    // Producto de prueba
+    // Datos de prueba estáticos para evitar crearlos repetidamente en cada test.
     private val productoPrueba = Producto(
         id = "1",
         databaseId = 100L,
@@ -51,23 +57,25 @@ class CartViewModelTest {
         origen = "Chile"
     )
 
+    // Configuración inicial que se ejecuta ANTES de cada @Test.
     @Before
     fun setUp() {
-        // Usar dispatcher de prueba
         Dispatchers.setMain(testDispatcher)
 
-        // Inicializar ViewModel y mocks
         viewModel = CartViewModel(mockApplication)
         viewModel.orderRepository = mockOrderRepository
         viewModel.sessionManager = mockSessionManager
     }
 
+    // Limpieza que se ejecuta despuesde cada @Test.
+
     @After
     fun tearDown() {
-        // Restaurar dispatcher real
         Dispatchers.resetMain()
     }
 
+    // Verifica la lógica básica de agregar items.
+    // Comprueba que el estado se actualice correctamente con el nuevo producto.
     @Test
     fun `addToCart agrega producto correctamente`() {
         // Agregar producto
@@ -80,6 +88,8 @@ class CartViewModelTest {
         assertEquals(1, items[0].cantidad)
     }
 
+    // Verifica la lógica de acumulación.
+    // Si el producto ya existe, no debe duplicarse en la lista, sino sumar su cantidad.
     @Test
     fun `addToCart incrementa cantidad si producto ya existe`() {
         // Agregar dos veces
@@ -92,8 +102,8 @@ class CartViewModelTest {
         assertEquals(2, items[0].cantidad)
     }
 
-    // --- NUEVOS TESTS PARA SUBIR COVERAGE ---
 
+    // Prueba la eliminación completa de un ítem y verifica que el total se recalcule a cero.
     @Test
     fun `removeFromCart elimina el producto del carrito`() {
         // DADO: Un carrito con un producto
@@ -108,6 +118,7 @@ class CartViewModelTest {
         assertEquals(0.0, viewModel.uiState.value.total, 0.0)
     }
 
+    // Si el usuario baja la cantidad a 0, el producto debe desaparecer del carrito.
     @Test
     fun `updateQuantity elimina el producto si la cantidad es 0 o menor`() {
         // DADO: Un carrito con un producto
@@ -120,6 +131,7 @@ class CartViewModelTest {
         assertTrue(viewModel.uiState.value.items.isEmpty())
     }
 
+    // Asegura que el código no falle si se intenta actualizar un ID inválido.
     @Test
     fun `updateQuantity no hace nada si el producto no existe`() {
         // DADO: Carrito vacío
@@ -134,6 +146,7 @@ class CartViewModelTest {
 
     // ----------------------------------------
 
+    // Valida el cálculo matemático del total, incluyendo reglas de negocio como el costo de envío fijo.
     @Test
     fun `total incluye costo de envio (3500) cuando hay productos`() {
         // DADO: 2 productos de 1000 c/u (Subtotal 2000) + Envío (3500)
@@ -149,6 +162,7 @@ class CartViewModelTest {
         assertEquals(3500.0, state.costoEnvio, 0.0)
     }
 
+    // Verifica el estado "limpio" del carrito.
     @Test
     fun `total es cero y sin envio si el carrito esta vacio`() {
         // DADO: Un carrito vacío (estado inicial o después de limpiar)
@@ -163,6 +177,8 @@ class CartViewModelTest {
         assertTrue(state.items.isEmpty())
     }
 
+    // Test de Corrutinas: Simula una compra exitosa.
+    // Verifica que tras el éxito, el carrito se vacíe y el estado de carga (loading) termine.
     @Test
     fun `realizarPedido exitoso limpia el carrito`() = runTest {
         // DADO: Carrito con productos y token válido
@@ -189,6 +205,8 @@ class CartViewModelTest {
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
+    // Valida validaciones previas (Guard clauses).
+    // Verifica que NO se llame al repositorio (`coVerify(exactly = 0)`) si falta el token de usuario.
     @Test
     fun `realizarPedido falla si no hay usuario logueado`() = runTest {
         // DADO: Carrito con producto pero SIN token (usuario no logueado)
@@ -208,6 +226,7 @@ class CartViewModelTest {
         coVerify(exactly = 0) { mockOrderRepository.createOrder(any(), any(), any()) }
     }
 
+    // Asegura que no se puedan enviar pedidos vacíos al servidor.
     @Test
     fun `realizarPedido no hace nada si el carrito esta vacio`() = runTest {
         // DADO: Carrito vacío
@@ -222,10 +241,10 @@ class CartViewModelTest {
         coVerify(exactly = 0) { mockOrderRepository.createOrder(any(), any(), any()) }
     }
 
+    // Verifica que la función de reseteo devuelva las banderas de UI a su estado original.
     @Test
     fun `resetCheckoutStatus limpia los estados`() {
-        // Forzamos un estado de éxito (aunque sea indirectamente o asumiendo un estado previo)
-        // Como no podemos setear el estado directamente, confiamos en que reset lo limpie a sus valores default.
+        // Forzamos un estado de éxito
 
         viewModel.resetCheckoutStatus()
 

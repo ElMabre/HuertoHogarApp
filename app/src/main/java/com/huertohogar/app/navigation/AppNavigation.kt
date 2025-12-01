@@ -1,3 +1,6 @@
+// Navigation graph principal de la app.
+// Maneja pantallas, rutas y ViewModels compartidos.
+
 package com.huertohogar.app.navigation
 
 import androidx.compose.foundation.layout.Box
@@ -23,7 +26,7 @@ import com.huertohogar.app.ui.screens.ContactScreen
 import com.huertohogar.app.ui.screens.HomeScreen
 import com.huertohogar.app.ui.screens.LoginScreen
 import com.huertohogar.app.ui.screens.MapScreen
-import com.huertohogar.app.ui.screens.OrderHistoryScreen // Importante importar la nueva pantalla
+import com.huertohogar.app.ui.screens.OrderHistoryScreen
 import com.huertohogar.app.ui.screens.ProductDetailScreen
 import com.huertohogar.app.ui.screens.ProductsScreen
 import com.huertohogar.app.ui.screens.ProfileScreen
@@ -34,18 +37,18 @@ import com.huertohogar.app.viewmodel.ProfileViewModel
 
 @Composable
 fun AppNavigation() {
-    val navController = rememberNavController()
+    val navController = rememberNavController() // Controla navegación
     val context = LocalContext.current
 
-    val sessionManager = remember { SessionManager(context) }
-    val tokenState by sessionManager.authToken.collectAsState(initial = null)
+    val sessionManager = remember { SessionManager(context) } // Maneja sesión local
+    val tokenState by sessionManager.authToken.collectAsState(initial = null) // Estado del token
 
-    val cartViewModel: CartViewModel = viewModel()
-    val profileViewModel: ProfileViewModel = viewModel()
+    val cartViewModel: CartViewModel = viewModel() // VM del carrito
+    val profileViewModel: ProfileViewModel = viewModel() // VM del perfil
 
     if (tokenState == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            CircularProgressIndicator() // Muestra carga mientras se obtiene el token
         }
     } else {
         val startDest = if (tokenState.isNullOrBlank()) AppScreens.LoginScreen.route else AppScreens.HomeScreen.route
@@ -102,7 +105,6 @@ fun AppNavigation() {
             composable(route = AppScreens.RecipesScreen.route) {
                 RecipeScreen(navController = navController, cartViewModel = cartViewModel)
             }
-
             composable(route = AppScreens.OrderHistoryScreen.route) {
                 OrderHistoryScreen(
                     navController = navController,

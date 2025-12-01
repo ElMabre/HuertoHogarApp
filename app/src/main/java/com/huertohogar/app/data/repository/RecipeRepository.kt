@@ -4,13 +4,18 @@ import com.huertohogar.app.data.remote.RecipeRetrofitClient
 import com.huertohogar.app.data.remote.model.RecipeDetailDto
 import com.huertohogar.app.data.remote.model.RecipeDto
 
+/**
+ * Repositorio encargado de obtener recetas desde la API externa.
+ * Provee funciones para buscar por ingrediente y obtener detalles completos.
+ */
 class RecipeRepository {
 
+    // Cliente Retrofit configurado para la API de recetas
     private val api = RecipeRetrofitClient.api
 
     /**
      * Obtiene una lista de recetas basadas en un ingrediente.
-     * (Ya teníamos esta función, la mantenemos igual).
+     * Retorna una lista vacía si ocurre algún error o no hay resultados.
      */
     suspend fun getRecipes(ingredient: String): List<RecipeDto> {
         return try {
@@ -28,19 +33,17 @@ class RecipeRepository {
 
     /**
      * Obtiene el detalle completo de una receta específica usando su ID.
-     * Retorna null si falla la conexión o si la receta no existe.
+     * La API devuelve una lista, pero solo se considera la primera receta encontrada.
+     * Retorna null si falla la conexión o si no se encuentra la receta.
      */
     suspend fun getRecipeDetail(id: String): RecipeDetailDto? {
         return try {
-            // Llamamos al nuevo endpoint de "lookup"
             val response = api.getRecipeById(id)
 
             if (response.isSuccessful && response.body() != null) {
-                // La API devuelve una lista, pero como buscamos por ID,
-                // solo nos interesa el primer elemento (si existe).
                 val meals = response.body()!!.meals
                 if (!meals.isNullOrEmpty()) {
-                    meals[0] // Retornamos la primera y única receta encontrada
+                    meals[0] // Retorna la primera receta de la lista
                 } else {
                     null
                 }

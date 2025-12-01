@@ -19,6 +19,9 @@ import com.huertohogar.app.ui.components.ProductCard
 import com.huertohogar.app.viewmodel.CartViewModel
 import com.huertohogar.app.viewmodel.ProductsViewModel
 
+// Pantalla de Catálogo Completo.
+// Responsabilidad: Mostrar todos los productos disponibles en un formato de grilla.
+// Es una pantalla "Stateful" (con estado) porque observa directamente el ViewModel.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductsScreen(
@@ -26,11 +29,14 @@ fun ProductsScreen(
     productsViewModel: ProductsViewModel = viewModel(),
     cartViewModel: CartViewModel
 ) {
+    // Suscripción al flujo de estado (StateFlow).
+    // Asegura que la UI se actualice automáticamente cuando cambian los datos (carga, error o lista).
     val uiState by productsViewModel.uiState.collectAsState()
 
+    // Estructura base de la pantalla.
+    // Reutilizamos `HuertoTopAppBar` para mantener la coherencia visual y el acceso al carrito.
     Scaffold(
         topBar = {
-
             HuertoTopAppBar(
                 title = "Todos los Productos",
                 canNavigateBack = true,
@@ -42,7 +48,9 @@ fun ProductsScreen(
 
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
 
-            // 3. CORRECCIÓN: Accedemos a las variables dentro de 'uiState'
+            // Lógica de Renderizado Condicional.
+            // Decide qué mostrar (Carga, Error o Contenido) basándose en el estado actual,
+            // una práctica estándar en arquitecturas MVVM para dar feedback al usuario.
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (uiState.errorMessage != null) {
@@ -52,7 +60,10 @@ fun ProductsScreen(
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
-                // Lista de productos
+                // Grilla Adaptativa y Eficiente.
+                // Usamos `LazyVerticalGrid` en lugar de `Column` para mostrar múltiples columnas.
+                // `GridCells.Adaptive(minSize = 180.dp)` es clave: calcula automáticamente cuántas
+                // columnas caben según el ancho del celular (responsivo).
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 180.dp),
                     modifier = Modifier
@@ -61,10 +72,10 @@ fun ProductsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // 4. CORRECCIÓN: La lista ya es de objetos 'Producto', no 'ProductDto'
+                    // Renderizado de Items.
+                    // Usamos el componente `ProductCard` para encapsular el diseño de cada celda
+                    // y pasamos la navegación como un evento lambda.
                     items(uiState.productos) { producto ->
-
-                        // No necesitamos mapear nada aquí, pasamos el producto directo
                         ProductCard(
                             producto = producto,
                             onProductClick = { productId ->

@@ -2,7 +2,7 @@ package com.huertohogar.app.model
 
 /**
  * Estado de la UI para la pantalla de Perfil.
- * Ahora incluye los datos del usuario para poder editarlos.
+ * Contiene los datos actuales del usuario y estados visuales relacionados a la edición.
  */
 data class ProfileUiState(
     val nombre: String = "",
@@ -14,6 +14,6 @@ data class ProfileUiState(
     val profileImageUri: String? = null,
 
     val isLoading: Boolean = false,
-    val successMessage: String? = null, // Para mostrar "Datos guardados correctamente"
+    val successMessage: String? = null,
     val errorMessage: String? = null
 )

@@ -34,6 +34,9 @@ import com.huertohogar.app.viewmodel.CartViewModel
 import com.huertohogar.app.viewmodel.HomeViewModel
 import com.huertohogar.app.viewmodel.ProfileViewModel
 
+// Pantalla Principal (Dashboard).
+// Actúa como un orquestador que muestra un resumen de la app.
+// Recibe múltiples ViewModels porque necesita datos de distintas fuentes (Productos, Carrito, Perfil).
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -41,19 +44,26 @@ fun HomeScreen(
     cartViewModel: CartViewModel,
     profileViewModel: ProfileViewModel
 ) {
+    // Patrón de observación de estado:
+    // La UI reacciona automáticamente a cambios en 'homeUiState' (ej. cuando terminan de cargar los productos).
     val homeUiState by homeViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
     Scaffold(
         topBar = {
+            // Componente reutilizable para mantener consistencia visual.
+            // Se le pasa el cartViewModel para que el ícono del carrito muestre el contador actualizado.
             HuertoTopAppBar(
                 title = "HuertoHogar",
-                canNavigateBack = false, // En Home usamos el menú, no flecha atrás
+                canNavigateBack = false,
                 navController = navController,
                 cartViewModel = cartViewModel
             )
         }
     ) { innerPadding ->
+        // Estructura de Scroll Vertical Global.
+        // Se usa 'Column' con 'verticalScroll' en lugar de 'LazyColumn' porque los elementos hijos
+        // son heterogéneos (Banner, Lista Horizontal, Botones) y no una lista infinita de items iguales.
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -61,13 +71,17 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- HERO SECTION (Banner) ---
+
+            // --- HERO SECTION (Banner Visual) ---
+            // Uso de Box para superponer elementos (Z-Index):
+            // 1. Imagen de fondo -> 2. Gradiente oscurecedor -> 3. Texto.
+            // Esto asegura que el texto sea legible sin importar los colores de la imagen.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
             ) {
-                // Imagen: Campo Chileno
+                // Imagen cargada desde URL (Coil)
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data("https://i.ibb.co/8LzHdNZR/Campo-Chileno.jpg")
@@ -78,7 +92,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Oscurecimiento para leer el texto
+                // Gradiente vertical negro con transparencia para contraste
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -89,7 +103,7 @@ fun HomeScreen(
                         )
                 )
 
-                // Texto Central
+                // Texto superpuesto centrado
                 Column(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -119,7 +133,7 @@ fun HomeScreen(
                 }
             }
 
-            // --- PRODUCTOS DESTACADOS ---
+            // --- CARRUSEL DE PRODUCTOS DESTACADOS ---
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
@@ -130,16 +144,20 @@ fun HomeScreen(
                     modifier = Modifier.padding(vertical = 16.dp)
                 )
 
+                // Manejo de estado de carga para feedback visual al usuario.
                 if (homeUiState.isLoading) {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 } else {
+                    // Lista Horizontal .
+                    // Compose maneja eficientemente un LazyRow dentro de un Column con verticalScroll.
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
                         items(homeUiState.productosDestacados) { producto ->
+                            // Reutilización del componente 'ProductCard' usado en el catálogo
                             ProductCard(
                                 producto = producto,
                                 onProductClick = { productId ->
@@ -154,7 +172,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- BOTONES ---
+            // --- SECCIÓN DE NAVEGACIÓN RÁPIDA ---
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)

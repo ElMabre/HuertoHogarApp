@@ -14,27 +14,34 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel para la pantalla de Perfil de Usuario.
+ * Gestiona la visualización de datos personales y la actualización de los mismos.
+ */
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
 
+    // Dependencias para persistencia local (DataStore) y remota (API).
     private val sessionManager = SessionManager(application)
     private val authRepository = AuthRepository()
 
+    // Estado UI (StateFlow).
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    // Inicialización: Empezamos a escuchar cambios en la sesión inmediatamente.
     init {
-        // Iniciamos la observación constante de los datos de sesión
         startSessionObservation()
     }
 
+    // Patrón Reactivo:
+    // En lugar de pedir los datos una sola vez, "observamos" (collect) el DataStore.
+    // Si algo cambia en el almacenamiento local (ej: foto nueva), la UI se actualiza automáticamente.
     private fun startSessionObservation() {
         viewModelScope.launch {
-            // 1. Observar cambios en el Email (Usuario actual)
-            // Al usar 'collect', si cambias de cuenta, esto se ejecuta de nuevo automáticamente.
+            // 1. Observar cambios en el Email
             launch {
                 sessionManager.userEmail.collect { email ->
                     _uiState.update { it.copy(email = email ?: "") }
-                    // Opcional: Si quisieras recargar datos del servidor al detectar cambio de email, podrías hacerlo aquí.
                 }
             }
 
@@ -48,6 +55,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // --- Actualización de campos del formulario (UI) ---
+    // Métodos simples para que la Vista actualice el estado mientras el usuario escribe.
 
     fun onNombreChange(text: String) {
         _uiState.update { it.copy(nombre = text) }
@@ -58,6 +66,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onRegionSelected(text: String) {
+        // Al cambiar región, reseteamos la comuna para evitar inconsistencias.
         _uiState.update { it.copy(region = text, comuna = "") }
     }
 
@@ -71,12 +80,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     // --- Acciones Principales ---
 
+    // Envía los cambios al servidor.
     fun saveChanges() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
 
             try {
-                // Obtenemos el token actual (sin 'collect', solo el valor actual para la petición)
+                // Aquí usamos .first() en lugar de .collect() porque solo necesitamos
+                // el valor del token *en este preciso momento* para hacer la llamada.
                 val token = sessionManager.authToken.first()
 
                 if (token.isNullOrEmpty()) {
@@ -84,6 +95,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     return@launch
                 }
 
+                // Preparamos el objeto para enviar al backend.
                 val updateDto = UserUpdateDto(
                     region = _uiState.value.region,
                     comuna = _uiState.value.comuna,
@@ -109,18 +121,21 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // Guarda la nueva foto localmente.
+    // NOTA: No actualizamos _uiState manualmente aquí. Al guardar en sessionManager,
+    // el observador del bloque 'init' detectará el cambio y actualizará la UI solo.
     fun updateProfileImage(uri: String) {
         viewModelScope.launch {
-            // Guardamos en DataStore. El 'collect' de arriba actualizará la UI automáticamente.
             sessionManager.saveProfileImage(uri)
         }
     }
 
+    // Cierre de sesión completo.
     fun onLogout(onLogoutSuccess: () -> Unit) {
         viewModelScope.launch {
-            // Limpiamos toda la sesión. Esto disparará los 'collect' con valores nulos, limpiando la UI.
+            // Borramos datos de disco. Esto disparará los observers con valores nulos.
             sessionManager.clearSession()
-            // Reseteamos el estado de la UI manualmente también por seguridad visual
+            // Reseteamos el estado visual por seguridad.
             _uiState.update { ProfileUiState() }
             onLogoutSuccess()
         }

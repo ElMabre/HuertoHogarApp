@@ -25,30 +25,42 @@ import com.huertohogar.app.navigation.AppScreens
 import com.huertohogar.app.ui.theme.HuertoHogarAppTheme
 import com.huertohogar.app.viewmodel.LoginViewModel
 
+// Pantalla de Autenticación.
+// Implementa el patrón MVVM: La UI observa el estado (LoginUiState) y envía eventos al ViewModel.
+// Se mantiene "limpia" de lógica de negocio (como validar correos o llamar APIs).
 @Composable
 fun LoginScreen(
     navController: NavController,
     loginViewModel: LoginViewModel = viewModel()
 ) {
+    // Suscripción reactiva al estado (StateFlow).
+    // Cualquier cambio en 'uiState' (error, carga, visibilidad password) recompondrá la UI automáticamente.
     val uiState by loginViewModel.uiState.collectAsState()
+
     Scaffold { innerPadding ->
+        // Contenedor principal con Scroll Vertical.
+        // El 'verticalScroll' es crítico aquí: cuando el teclado virtual sube, reduce el espacio de pantalla.
+        // Sin scroll, los campos inferiores o el botón de ingreso quedarían ocultos o inaccesibles.
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState()), // Permite scroll en pantallas pequeñas
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center // Centra el contenido verticalmente
+            verticalArrangement = Arrangement.Center
         ) {
             Text("Iniciar Sesión", style = MaterialTheme.typography.headlineMedium)
             Text(
                 "Ingresa a tu cuenta para continuar",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) // Un gris más suave
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Campos de Texto (Inputs) Controlados.
+            // Siguen el principio de "Single Source of Truth": el valor lo dicta el ViewModel, no el componente.
+            // Se manejan errores visuales (rojo) y se deshabilitan durante la carga para evitar ediciones concurrentes.
             OutlinedTextField(
                 value = uiState.email,
                 onValueChange = { loginViewModel.onEmailChange(it) },
@@ -58,7 +70,6 @@ fun LoginScreen(
                 supportingText = { if (uiState.errors.email != null) Text(uiState.errors.email!!) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
-                // Deshabilitamos el campo si está cargando
                 enabled = !uiState.isLoading
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -70,6 +81,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 isError = uiState.errors.password != null,
                 supportingText = { if (uiState.errors.password != null) Text(uiState.errors.password!!) },
+                // Lógica de UI para ocultar/mostrar contraseña
                 visualTransformation = if (uiState.passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
@@ -81,18 +93,19 @@ fun LoginScreen(
                         )
                     }
                 },
-                // Deshabilitamos el campo si está cargando
                 enabled = !uiState.isLoading
             )
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Botón de Acción Principal con Callback de Navegación.
+            // Separación de responsabilidades:
+            // 1. ViewModel: Valida y autentica (Lógica).
+            // 2. UI: Navega SOLAMENTE si el ViewModel confirma el éxito mediante la lambda.
             Button(
                 onClick = {
-                    // 1. Llamamos a la nueva función del ViewModel
                     loginViewModel.onLoginClicked {
-                        // 2. Esta es la lambda 'onLoginSuccess'.
-                        // Este código solo se ejecutará si el login fue exitoso.
                         navController.navigate(AppScreens.HomeScreen.route) {
+                            // Limpiamos la pila de navegación para que al volver atrás no regrese al Login.
                             popUpTo(AppScreens.LoginScreen.route) { inclusive = true }
                         }
                     }
@@ -100,14 +113,14 @@ fun LoginScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                // 3. Deshabilitamos el botón si está cargando
+                // UX: Prevenir múltiples clics bloqueando el botón mientras carga.
                 enabled = !uiState.isLoading
             ) {
-                // 4. Mostramos el loader o el texto
+                // Feedback visual: Reemplazar texto por loader mejora la experiencia de usuario.
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary // Color del loader
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
                     Text("Ingresar")
@@ -115,9 +128,9 @@ fun LoginScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Navegación secundaria hacia Registro.
             TextButton(
                 onClick = { navController.navigate(AppScreens.RegisterScreen.route) },
-                // Deshabilitamos el botón si está cargando
                 enabled = !uiState.isLoading
             ) {
                 Text("¿No tienes una cuenta? Crear Cuenta")
@@ -126,6 +139,8 @@ fun LoginScreen(
     }
 }
 
+// Preview para diseño.
+// Permite visualizar cambios en la UI sin necesidad de ejecutar la app completa en el emulador.
 @Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {

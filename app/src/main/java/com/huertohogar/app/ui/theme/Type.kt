@@ -27,23 +27,23 @@ val PlayfairDisplay = FontFamily(
 val AppTypography = Typography(
     // Estilo para los títulos más grandes y llamativos de la app.
     displayLarge = TextStyle(
-        fontFamily = PlayfairDisplay, // Usa la fuente Playfair Display.
-        fontWeight = FontWeight.Bold, // En negrita.
-        fontSize = 57.sp,             // Tamaño de la letra.
-        lineHeight = 64.sp,           // Espacio vertical entre líneas.
-        letterSpacing = (-0.25).sp    // Espacio horizontal entre letras (un poco más juntas).
+        fontFamily = PlayfairDisplay,
+        fontWeight = FontWeight.Bold,
+        fontSize = 57.sp,
+        lineHeight = 64.sp,
+        letterSpacing = (-0.25).sp
     ),
     // Estilo para títulos de secciones o pantallas.
     titleLarge = TextStyle(
         fontFamily = PlayfairDisplay,
-        fontWeight = FontWeight.Normal, // Grosor normal.
+        fontWeight = FontWeight.Normal,
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
     // Estilo para el texto principal de la aplicación, como párrafos o descripciones.
     bodyLarge = TextStyle(
-        fontFamily = Montserrat, // Usa la fuente Montserrat.
+        fontFamily = Montserrat,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -52,12 +52,9 @@ val AppTypography = Typography(
     // Estilo para textos que necesitan destacar un poco, como botones o etiquetas.
     labelLarge = TextStyle(
         fontFamily = Montserrat,
-        fontWeight = FontWeight.SemiBold, // Un poco más grueso que normal (semi-negrita).
+        fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     )
 )
-// TODO: Se podrían definir más estilos de texto (como bodyMedium, titleSmall, etc.)
-// para tener un control más fino sobre la tipografía en diferentes partes de la app.
-// Esto ayuda a mantener la consistencia y seguir las guías de Material Design.

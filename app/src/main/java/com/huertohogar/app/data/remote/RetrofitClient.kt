@@ -15,11 +15,11 @@ object RetrofitClient {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    // --- BASE URL ÚNICA (EC2 con Nginx) ---
-    // Nginx recibe todo en el puerto 80 y redirige:
-    // /api/auth -> Puerto 8081
-    // /api/productos -> Puerto 8082
-    // /api/pedidos -> Puerto 8083
+    // Base URL única (EC2 con Nginx).
+    // Nginx distribuye:
+    // /api/auth -> 8081
+    // /api/productos -> 8082
+    // /api/pedidos -> 8083
     private const val BASE_URL = "http://18.211.31.168/"
 
     private val retrofit: Retrofit = Retrofit.Builder()
@@ -28,14 +28,8 @@ object RetrofitClient {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
-    // --- Exposición de APIs ---
-    // Como definimos todos los endpoints (Auth, Productos, Pedidos) en la misma interfaz HuertoHogarApi,
-    // podemos reutilizar la misma instancia de Retrofit.
-
+    // Endpoints para autenticación, productos y pedidos utilizando la misma interfaz.
     val authApi: HuertoHogarApi = retrofit.create(HuertoHogarApi::class.java)
-
     val productApi: HuertoHogarApi = retrofit.create(HuertoHogarApi::class.java)
-
-    // Descomentamos y habilitamos la API de pedidos
     val orderApi: HuertoHogarApi = retrofit.create(HuertoHogarApi::class.java)
 }

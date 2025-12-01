@@ -4,40 +4,44 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences // Importante para manejar errores
+import androidx.datastore.preferences.core.emptyPreferences // Para manejar errores cuando no se pueden leer preferencias
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch // Importante para capturar errores de lectura
+import kotlinx.coroutines.flow.catch // Para capturar errores en lectura del DataStore
 import kotlinx.coroutines.flow.map
-import java.io.IOException // Importante
+import java.io.IOException // Error común al leer DataStore cuando se reinstala la app
 
-// Extensión para crear el DataStore (Singleton)
+// Extensión que crea un DataStore asociado al contexto.
+// Es un Singleton automático gracias a "preferencesDataStore".
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_session")
 
 class SessionManager(private val context: Context) {
 
     companion object {
+        // Llaves para guardar valores dentro del DataStore
         val USER_EMAIL_KEY = stringPreferencesKey("user_email")
         val PROFILE_IMAGE_KEY = stringPreferencesKey("profile_image_uri")
 
-        // NUEVAS CLAVES PARA LA BASE DE DATOS REMOTA
+        // Claves nuevas para datos obtenidos desde la API remota
         val USER_TOKEN_KEY = stringPreferencesKey("user_token")
         val USER_ID_KEY = longPreferencesKey("user_id")
     }
 
-    // --- TOKEN (Para autorización en la API) ---
+    // --- TOKEN (Se usa para autorizaciones en la API REST) ---
     suspend fun saveAuthToken(token: String) {
+        // Guardamos el token dentro del DataStore
         context.dataStore.edit { preferences ->
             preferences[USER_TOKEN_KEY] = token
         }
     }
 
-    // CORRECCIÓN CRÍTICA AQUÍ:
+    // Flow que expone el token actual
     val authToken: Flow<String?> = context.dataStore.data
         .catch { exception ->
-            // Si ocurre un error leyendo (común al reinstalar), evitamos que la app crashee
+            // Manejo de errores: si ocurre un IOException (muy común después de reinstalar)
+            // se devuelve un conjunto de preferencias vacío para evitar que la app crashee.
             if (exception is IOException) {
                 emit(emptyPreferences())
             } else {
@@ -45,44 +49,48 @@ class SessionManager(private val context: Context) {
             }
         }
         .map { preferences ->
-            // Si no hay token, devolvemos "" (vacío) en vez de null.
-            // Esto le dice a AppNavigation: "Ya terminé de leer, y NO hay usuario".
-            // Si devolvemos null, AppNavigation piensa: "Todavía estoy leyendo, sigue mostrando el círculo".
+            // Si no existe un token guardado, devolvemos un String vacío.
+            // Esto ayuda a la navegación de la app para saber que NO hay usuario logeado,
+            // evitando estados intermedios con "null".
             preferences[USER_TOKEN_KEY] ?: ""
         }
 
-    // --- USER ID (Para saber a quién actualizar) ---
+    // --- USER ID (Identifica al usuario en la base de datos remota) ---
     suspend fun saveUserId(id: Long) {
         context.dataStore.edit { preferences ->
             preferences[USER_ID_KEY] = id
         }
     }
 
+    // Flow que devuelve el userId almacenado (o null si no existe)
     val userId: Flow<Long?> = context.dataStore.data
         .map { preferences -> preferences[USER_ID_KEY] }
 
-    // --- EMAIL ---
+    // --- EMAIL DEL USUARIO ---
     suspend fun saveUserEmail(email: String) {
         context.dataStore.edit { preferences ->
             preferences[USER_EMAIL_KEY] = email
         }
     }
 
+    // Flujo que expone el email guardado
     val userEmail: Flow<String?> = context.dataStore.data
         .map { preferences -> preferences[USER_EMAIL_KEY] }
 
-    // --- IMAGEN DE PERFIL (Local) ---
+    // --- IMAGEN DE PERFIL (Solo la URI local) ---
     suspend fun saveProfileImage(uri: String) {
         context.dataStore.edit { preferences ->
             preferences[PROFILE_IMAGE_KEY] = uri
         }
     }
 
+    // Flujo que entrega la imagen de perfil guardada
     val profileImage: Flow<String?> = context.dataStore.data
         .map { preferences -> preferences[PROFILE_IMAGE_KEY] }
 
     // --- CERRAR SESIÓN ---
     suspend fun clearSession() {
+        // Eliminamos todos los datos relacionados al usuario
         context.dataStore.edit { preferences ->
             preferences.remove(USER_EMAIL_KEY)
             preferences.remove(PROFILE_IMAGE_KEY)

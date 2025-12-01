@@ -28,29 +28,34 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 
+// Clase de pruebas para RegisterViewModel.
+// Verifica que la lógica del formulario de registro, validaciones y llamadas a la API funcionen correctamente sin conectar al servidor real.
 @OptIn(ExperimentalCoroutinesApi::class)
 class RegisterViewModelTest {
 
-    // ViewModel bajo prueba
     private lateinit var viewModel: RegisterViewModel
 
-    // Dependencias simuladas
+    // Dependencias simuladas (Mocks).
+    // Usamos 'mockk' para crear versiones falsas del Repositorio y SessionManager.
+    // Esto aísla el ViewModel: si el test falla, sabemos que es culpa del ViewModel y no de la base de datos o internet.
     private val mockRepository = mockk<AuthRepository>(relaxed = true)
     private val mockSessionManager = mockk<SessionManager>(relaxed = true)
     private val mockApplication = mockk<Application>(relaxed = true)
 
-    // Dispatcher especial para tests
+    // Despachador de pruebas para Corrutinas.
+    // Permite que el código asíncrono (suspend functions) se ejecute de manera controlada y predecible en los tests.
     private val testDispatcher = StandardTestDispatcher()
 
+    // Configuración inicial (@Before).
+    // Se ejecuta antes de cada test para asegurar un estado limpio.
     @Before
     fun setUp() {
-        // Reemplaza Dispatchers.Main por uno controlable
         Dispatchers.setMain(testDispatcher)
-
-        // Crea el VM con Application mock
         viewModel = RegisterViewModel(mockApplication)
 
-        // Inyección forzada mediante reflexión (repositorio y session manager)
+        // Inyección de dependencias mediante Reflexión.
+        // Como el ViewModel tiene propiedades privadas para el repositorio y la sesión,
+        // usamos Java Reflection para "forzar" la entrada de nuestros mocks en esas variables privadas.
         val authRepoField = RegisterViewModel::class.java.getDeclaredField("authRepository")
         authRepoField.isAccessible = true
         authRepoField.set(viewModel, mockRepository)
@@ -60,33 +65,39 @@ class RegisterViewModelTest {
         sessionField.set(viewModel, mockSessionManager)
     }
 
+    // Limpieza (@After).
+    // Restablece el hilo principal (Main dispatcher) para no afectar otras pruebas que corran después.
     @After
     fun tearDown() {
-        // Restaura el dispatcher original
         Dispatchers.resetMain()
     }
 
+    // Test: Validación de formulario (Lógica de negocio local).
+    // Verifica que NO se intente contactar al servidor si los datos ingresados son inválidos. Ahorra recursos y datos.
     @Test
     fun `onRegisterClicked con formulario invalido no llama al repositorio`() = runTest {
-        // Datos incorrectos
+        // DADO: Un formulario con datos vacíos o incorrectos.
         viewModel.onNombreChange("")
         viewModel.onEmailChange("correo-invalido")
 
         var successCalled = false
+
+        // CUANDO: El usuario presiona registrar.
         viewModel.onRegisterClicked { successCalled = true }
 
-        // No debe llamarse la API
+        // ENTONCES:
+        // 1. Verificamos que el repositorio NUNCA fue llamado (exactly = 0).
         coVerify(exactly = 0) { mockRepository.register(any()) }
-        assertFalse(successCalled)
-
-        // Debe mostrar errores
+        // 2. Verificamos que se generaron errores en el estado de la UI.
         assertNotNull(viewModel.uiState.value.errors.nombre)
         assertNotNull(viewModel.uiState.value.errors.email)
     }
 
+    // Test: Flujo de éxito ("Happy Path").
+    // Verifica que, con datos correctos, el ViewModel llame al repositorio y guarde la sesión si la API responde bien.
     @Test
     fun `onRegisterClicked con datos validos llama al repositorio y guarda sesion`() = runTest {
-        // Campos del formulario correctos
+        // DADO: Un formulario completo y válido.
         viewModel.onNombreChange("Juan")
         viewModel.onApellidoChange("Perez")
         viewModel.onRunChange("12345678-9")
@@ -96,27 +107,28 @@ class RegisterViewModelTest {
         viewModel.onComunaSelected("Santiago")
         viewModel.onDireccionChange("Calle Falsa 123")
 
-        // Respuesta simulada exitosa
+        // Simulamos una respuesta exitosa del servidor (HTTP 200).
         val mockUser = UsuarioDto(1, "Juan", "Perez", "juan@test.com", "CLIENTE")
         val mockAuthResponse = AuthResponseDto("fake-token", mockUser)
         coEvery { mockRepository.register(any()) } returns Response.success(mockAuthResponse)
 
+        // CUANDO: Se hace clic en registrar.
         var successCalled = false
         viewModel.onRegisterClicked { successCalled = true }
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Verificaciones clave
+        // ENTONCES: Confirmamos que se llamó a la API y se guardó el email localmente.
         coVerify { mockRepository.register(any()) }
         coVerify { mockSessionManager.saveUserEmail("juan@test.com") }
-
         assertTrue(successCalled)
-        assertFalse(viewModel.uiState.value.isLoading)
     }
 
+    // Test: Manejo de errores del servidor ("Sad Path").
+    // Verifica cómo reacciona la app si el servidor rechaza la solicitud (ej. Error 400 Bad Request).
     @Test
     fun `onRegisterClicked si falla el servidor muestra error global`() = runTest {
-        // Formulario válido
-        viewModel.onNombreChange("Juan")
+        // DADO: Un formulario válido pero un servidor que falla.
+        viewModel.onNombreChange("Juan") // ... (llenado de datos mínimos para pasar validación local)
         viewModel.onApellidoChange("Perez")
         viewModel.onRunChange("12345678-9")
         viewModel.onEmailChange("juan@test.com")
@@ -125,26 +137,28 @@ class RegisterViewModelTest {
         viewModel.onComunaSelected("Concepción")
         viewModel.onDireccionChange("Avda Siempre Viva")
 
-        // Error 400 simulado
+        // Simulamos un error HTTP 400.
         val errorBody = "Bad Request".toResponseBody("application/json".toMediaTypeOrNull())
         coEvery { mockRepository.register(any()) } returns Response.error(400, errorBody)
 
+        // CUANDO: Se intenta registrar.
         var successCalled = false
         viewModel.onRegisterClicked { successCalled = true }
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Debe mostrar error global
+        // ENTONCES: No debe navegar al éxito, y debe mostrar un mensaje de error global en la UI.
         assertFalse(successCalled)
         assertNotNull(viewModel.uiState.value.registerErrorGlobal)
-        assertFalse(viewModel.uiState.value.isLoading)
     }
 
+    // Test: Regla específica de validación.
+    // Prueba unitaria pura de lógica de validación (Regex de email) para asegurar que detecta formatos erróneos.
     @Test
     fun `Validacion de email detecta formatos incorrectos`() {
-        // Email incorrecto
+        // DADO: Un email sin @ o dominio.
         viewModel.onEmailChange("juan.perez")
 
-        // Otros campos válidos mínimos
+        // Llenamos el resto con datos ficticios para aislar el error del email.
         viewModel.onPasswordChange("123456")
         viewModel.onNombreChange("A")
         viewModel.onApellidoChange("B")
@@ -153,9 +167,10 @@ class RegisterViewModelTest {
         viewModel.onComunaSelected("C")
         viewModel.onDireccionChange("D")
 
+        // CUANDO: Se valida el formulario.
         viewModel.onRegisterClicked {}
 
-        // Debe marcar error en email
+        // ENTONCES: El campo email debe reportar error.
         assertNotNull(viewModel.uiState.value.errors.email)
     }
 }

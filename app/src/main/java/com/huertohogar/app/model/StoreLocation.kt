@@ -3,17 +3,18 @@ package com.huertohogar.app.model
 import com.google.android.gms.maps.model.LatLng
 
 /**
- * Modelo para representar una tienda física en el mapa.
+ * Modelo que representa una tienda física mostrada en el mapa.
+ * Contiene nombre, ubicación geográfica y dirección.
  */
 data class StoreLocation(
-    val name: String,
-    val location: LatLng,
-    val address: String
+    val name: String,        // Nombre de la sucursal
+    val location: LatLng,    // Coordenadas geográficas (latitud/longitud) para Google Maps
+    val address: String      // Dirección física de la tienda
 )
 
 /**
- * Lista estática de tiendas según el caso HuertoHogar.
- * (Santiago, Puerto Montt, Villarrica, Nacimiento, Viña del Mar, Valparaíso, Concepción)
+ * Objeto que contiene una lista estática de tiendas disponibles en HuertoHogar.
+ * Estas ubicaciones son usadas para marcadores en el mapa.
  */
 object HuertoHogarStores {
     val list = listOf(

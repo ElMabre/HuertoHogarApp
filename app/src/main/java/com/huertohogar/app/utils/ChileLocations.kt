@@ -30,7 +30,5 @@ object ChileLocations {
             "Rancagua", "San Fernando", "Rengo", "Machalí", "Pichilemu"
         )
     )
-
-    // Lista solo con los nombres de las regiones (para el primer dropdown)
     val regiones = regionesYComunas.keys.toList()
 }

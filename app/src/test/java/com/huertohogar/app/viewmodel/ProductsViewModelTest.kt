@@ -20,21 +20,26 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+// clase de pruebas para la pantalla de productos
+// verificamos que la lista cargue bien y que maneje los errores si se cae la red
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProductsViewModelTest {
 
     // ViewModel que será probado
     private lateinit var viewModel: ProductsViewModel
 
-    // Repositorio simulado con MockK
+    // mocks para simular el backend y la app.
+    // el relaxed sirve para que no tire error si llamamos a algo que no configuramos
     private val mockRepository = mockk<ProductRepository>(relaxed = true)
 
     // Application simulado para inicializar el ViewModel
     private val mockApplication = mockk<Application>(relaxed = true)
 
-    // Dispatcher especial para pruebas de corrutinas
+    // dispatcher especial para que las corrutinas corran en orden en los tests
     private val testDispatcher = StandardTestDispatcher()
 
+    // configuracion antes de cada test.
+    // aqui uso un truco medio sucio con reflexion para inyectar el mock porque el repo es privado
     @Before
     fun setUp() {
         // Reemplaza Dispatchers.Main por uno controlable en pruebas
@@ -49,12 +54,15 @@ class ProductsViewModelTest {
         repoField.set(viewModel, mockRepository)
     }
 
+    // limpieza despues de probar
     @After
     fun tearDown() {
         // Restaura el dispatcher original
         Dispatchers.resetMain()
     }
 
+    // test del camino feliz.
+    // le decimos al mock que devuelva datos y revisamos que el estado se actualice con esos productos
     @Test
     fun `cargarProductos actualiza el estado con lista de productos al tener exito`() = runTest {
         // Datos simulados devueltos por el repositorio
@@ -80,6 +88,8 @@ class ProductsViewModelTest {
         assertNull(state.errorMessage)
     }
 
+    // test de fallo. si el repo tira excepcion (ej: sin internet)
+    // el viewmodel debe capturarlo y poner el mensaje de error en la UI
     @Test
     fun `cargarProductos maneja errores y actualiza mensaje de error`() = runTest {
         // Se simula un error al pedir los productos

@@ -19,22 +19,31 @@ import androidx.navigation.NavController
 import com.huertohogar.app.ui.components.HuertoTopAppBar
 import com.huertohogar.app.viewmodel.CartViewModel
 
+// Pantalla de presentación de información estática.
+// Recibe el `CartViewModel` no para usarlo aquí, sino para pasarlo a la `HuertoTopAppBar`,
+// asegurando que el contador del carrito sea visible y consistente en toda la app.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactScreen(
     navController: NavController,
     cartViewModel: CartViewModel = viewModel()
 ) {
+    // Estructura base de Material Design.
+    // Se utiliza el componente compartido `HuertoTopAppBar` para mantener la identidad visual
+    // y la funcionalidad de navegación (botón "Atrás") centralizada.
     Scaffold(
         topBar = {
             HuertoTopAppBar(
                 title = "Contacto",
-                canNavigateBack = true, // Permite volver
+                canNavigateBack = true,
                 navController = navController,
                 cartViewModel = cartViewModel
             )
         }
     ) { innerPadding ->
+        // Contenedor principal con Scroll.
+        // Se añade `verticalScroll` preventivamente: aunque el contenido es poco,
+        // esto evita errores de visualización en pantallas muy pequeñas o en modo horizontal.
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -60,7 +69,9 @@ fun ContactScreen(
 
             HorizontalDivider()
 
-            // Sección de Datos de Contacto
+            // Reutilización de UI:
+            // En lugar de repetir estructuras Row/Column/Icon tres veces,
+            // invocamos al componente auxiliar `ContactItem` definido abajo.
             ContactItem(
                 icon = Icons.Default.Email,
                 title = "Correo Electrónico",
@@ -84,6 +95,9 @@ fun ContactScreen(
     }
 }
 
+// Componente "Stateless" (sin estado) auxiliar.
+// Extraer este bloque pequeño mejora la legibilidad del código principal y facilita
+// cambiar el diseño de todos los ítems de contacto desde un único lugar.
 @Composable
 fun ContactItem(icon: ImageVector, title: String, detail: String) {
     Row(

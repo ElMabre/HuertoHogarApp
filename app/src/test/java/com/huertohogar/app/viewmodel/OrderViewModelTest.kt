@@ -26,19 +26,23 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 
+// clase de pruebas para el historial de pedidos
+// revisamos que cargue la lista y funcionen las cancelaciones sin necesitar el backend real
 @OptIn(ExperimentalCoroutinesApi::class)
 class OrderViewModelTest {
 
     private lateinit var viewModel: OrderViewModel
 
-    // Mocks relajados para simular dependencias
+    // mocks para simular las dependencias. relaxed=true ayuda a no configurar cada respuesta pequeña
     private val mockOrderRepository = mockk<OrderRepository>(relaxed = true)
     private val mockSessionManager = mockk<SessionManager>(relaxed = true)
     private val mockApplication = mockk<Application>(relaxed = true)
 
-    // Dispatcher para pruebas de corrutinas
+    // dispatcher necesario para que las corrutinas funcionen bien en los tests
     private val testDispatcher = StandardTestDispatcher()
 
+    // esto corre antes de cada test.
+    // por defecto, simulo que el usuario SI tiene sesion (token valido) para ahorrar codigo en los tests normales
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -57,6 +61,7 @@ class OrderViewModelTest {
         Dispatchers.resetMain()
     }
 
+    // prueba feliz: descarga los pedidos y revisa que el mas nuevo (id mayor) quede primero
     @Test
     fun `loadMyOrders carga pedidos exitosamente y los ordena por ID`() = runTest {
         // DADO: Lista de pedidos desordenada
@@ -82,6 +87,8 @@ class OrderViewModelTest {
         assertEquals(2L, state.pedidos[0].id)
     }
 
+    // prueba de seguridad: si se borro el token, no deberia intentar cargar pedidos
+    // creo un viewmodel local aqui para asegurarme que este limpio desde cero y no use el del setup
     @Test
     fun `loadMyOrders muestra error si no hay usuario logueado`() = runTest {
         // DADO: Token vacío
@@ -109,6 +116,8 @@ class OrderViewModelTest {
         coVerify(exactly = 0) { localMockRepository.getMyOrders(any()) }
     }
 
+    // prueba de interaccion: cancelar una orden.
+    // verifica que despues de cancelar, se recargue la lista automaticamente para ver los cambios
     @Test
     fun `cancelarPedido exitoso muestra mensaje y recarga lista`() = runTest {
         // DADO: Cancelación exitosa
@@ -132,6 +141,8 @@ class OrderViewModelTest {
         coVerify(atLeast = 1) { mockOrderRepository.getMyOrders(any()) }
     }
 
+    // prueba de manejo de errores
+    // si el servidor dice que no se puede cancelar (ej: error 400), hay que avisarle al usuario y no crashear
     @Test
     fun `cancelarPedido falla si el backend retorna error`() = runTest {
         // DADO: Error 400 (ej: pedido ya enviado)

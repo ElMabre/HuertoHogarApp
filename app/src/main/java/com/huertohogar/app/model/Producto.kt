@@ -1,14 +1,12 @@
 package com.huertohogar.app.model
 
 /**
- * Modelo de dominio que representa un Producto en la UI de la App.
+ * Modelo de dominio que representa un Producto dentro de la UI de la aplicación.
+ * Contiene toda la información necesaria para mostrarlo y procesarlo en el sistema.
  */
 data class Producto(
-    // Mantenemos 'id' como el SKU (String) para la navegación y compatibilidad con la UI actual.
     val id: String,
 
-    // NUEVO: ID interno de la Base de Datos (Long).
-    // Es fundamental guardarlo aquí porque el endpoint de 'Crear Pedido' exige IDs numéricos, no SKUs.
     val databaseId: Long,
 
     val nombre: String,

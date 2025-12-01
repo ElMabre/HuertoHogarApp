@@ -1,7 +1,6 @@
 package com.huertohogar.app.viewmodel
 
 import android.app.Application
-// import android.util.Patterns <-- ELIMINAMOS ESTA LÍNEA
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.huertohogar.app.data.local.datastorage.SessionManager
@@ -15,17 +14,28 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel para gestionar el registro de nuevos usuarios.
+ * Hereda de AndroidViewModel para tener acceso al Contexto y guardar la sesión tras un registro exitoso.
+ */
 class RegisterViewModel(application: Application) : AndroidViewModel(application) {
 
+    // Dependencias necesarias para guardar datos locales y conectar a la API.
+    // Definidas como 'var' para permitir inyección de Mocks en tests.
     var sessionManager = SessionManager(application)
     var authRepository = AuthRepository()
 
+    // Gestión del Estado de la UI (Formulario, Errores, Loading).
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
+    // Regex simple para validar formato de correo.
     private val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
 
-    // --- Actualización de campos ---
+    // --- Actualización de campos del formulario ---
+
+    // Métodos para actualizar el estado conforme el usuario escribe.
+    // Además de guardar el valor, limpiamos el error específico de ese campo para mejorar la UX.
 
     fun onNombreChange(nombre: String) {
         _uiState.update { it.copy(nombre = nombre, errors = it.errors.copy(nombre = null)) }
@@ -40,6 +50,7 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onRegionSelected(region: String) {
+        // Al cambiar región, reseteamos comuna para mantener consistencia.
         _uiState.update { it.copy(region = region, comuna = "", errors = it.errors.copy(region = null)) }
     }
 
@@ -61,13 +72,16 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
 
     // --- Lógica de Registro ---
 
+    // Proceso principal: Valida -> Carga -> Llama a API -> Guarda Sesión.
     fun onRegisterClicked(onRegisterSuccess: () -> Unit) {
+        // Validación local primero para evitar llamadas innecesarias al servidor.
         if (!validarFormulario()) return
 
         _uiState.update { it.copy(isLoading = true, registerErrorGlobal = null) }
 
         viewModelScope.launch {
             try {
+                // Preparamos el objeto DTO con los datos actuales del estado.
                 val currentState = _uiState.value
                 val request = RegisterRequestDto(
                     nombre = currentState.nombre,
@@ -84,6 +98,7 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
 
                 if (response.isSuccessful && response.body() != null) {
                     val authData = response.body()!!
+                    // Si el registro devuelve token, iniciamos sesión automáticamente.
                     sessionManager.saveUserEmail(authData.usuario.email)
 
                     _uiState.update { it.copy(isLoading = false) }
@@ -107,6 +122,8 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    // Comprueba reglas de negocio básicas (campos vacíos, longitud de contraseña).
+    // Actualiza el estado de errores para mostrar advertencias en rojo en la UI.
     private fun validarFormulario(): Boolean {
         val state = _uiState.value
 
@@ -125,6 +142,7 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
 
         _uiState.update { it.copy(errors = errors) }
 
+        // Retorna true solo si todos los campos de error son nulos.
         return errors.nombre == null && errors.apellido == null &&
                 errors.run == null && errors.region == null &&
                 errors.comuna == null && errors.direccion == null &&

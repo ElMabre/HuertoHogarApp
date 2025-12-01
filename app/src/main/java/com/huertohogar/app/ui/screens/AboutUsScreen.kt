@@ -25,20 +25,24 @@ import com.huertohogar.app.viewmodel.CartViewModel
 @Composable
 fun AboutUsScreen(
     navController: NavController,
-    cartViewModel: CartViewModel = viewModel() // Obtenemos el ViewModel del carrito para la barra
+    cartViewModel: CartViewModel = viewModel() // ViewModel del carrito para la barra superior
 ) {
+    // Contexto necesario para cargar la imagen remota con Coil
     val context = LocalContext.current
 
     Scaffold(
+        // --- Barra superior reutilizable con navegación y carrito ---
         topBar = {
             HuertoTopAppBar(
                 title = "Nosotros",
-                canNavigateBack = true, // Permitimos volver atrás
+                canNavigateBack = true,
                 navController = navController,
                 cartViewModel = cartViewModel
             )
         }
     ) { innerPadding ->
+
+        // --- Contenedor principal desplazable para manejar contenido largo ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -49,8 +53,8 @@ fun AboutUsScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- LOGO HUERTO HOGAR ---
-            // Usamos AsyncImage para cargar el logo desde el link que me diste
+            // --- LOGO DE LA MARCA ---
+            // Se usa Coil para cargar la imagen remota con animación de crossfade
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data("https://i.ibb.co/hJZ4vr17/huertohogarlogoconfondo.png")
@@ -58,14 +62,14 @@ fun AboutUsScreen(
                     .build(),
                 contentDescription = "Logo Huerto Hogar",
                 modifier = Modifier
-                    .size(200.dp) // Tamaño ajustado para que se vea bien
+                    .size(200.dp)
                     .padding(8.dp),
                 contentScale = ContentScale.Fit
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- SECCIÓN: SOBRE NOSOTROS ---
+            // --- TÍTULO DE LA SECCIÓN PRINCIPAL ---
             Text(
                 text = "Sobre HuertoHogar",
                 style = MaterialTheme.typography.headlineMedium,
@@ -75,8 +79,11 @@ fun AboutUsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // --- TARJETA EXPLICATIVA SOBRE LA EMPRESA ---
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -89,7 +96,7 @@ fun AboutUsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- SECCIÓN: NUESTRA VISIÓN ---
+            // --- TÍTULO DE LA SECCIÓN: VISIÓN ---
             Text(
                 text = "Nuestra Visión",
                 style = MaterialTheme.typography.titleLarge,
@@ -98,6 +105,7 @@ fun AboutUsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // --- DESCRIPCIÓN DE LA VISIÓN A LARGO PLAZO ---
             Text(
                 text = "Ser la plataforma líder en distribución de productos orgánicos y naturales en la región, fomentando una alimentación saludable, sostenible y apoyando la economía local.",
                 style = MaterialTheme.typography.bodyLarge,

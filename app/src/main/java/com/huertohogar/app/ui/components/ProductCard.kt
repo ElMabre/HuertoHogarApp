@@ -27,12 +27,10 @@ import com.huertohogar.app.model.Producto
 import com.huertohogar.app.ui.theme.HuertoHogarAppTheme
 import java.util.Locale
 
-// Definimos el Locale para Chile
+// Locale específico para formatear precios según la convención chilena.
 private val chileLocale: Locale = Locale.forLanguageTag("es-CL")
 
-/**
- * Un Composable reutilizable que muestra la información de un producto en formato de tarjeta.
- */
+// Tarjeta reutilizable que encapsula la presentación visual de un producto.
 @SuppressLint("DefaultLocale")
 @Composable
 fun ProductCard(
@@ -40,17 +38,19 @@ fun ProductCard(
     onProductClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Contenedor visual principal: tarjeta con padding y clic para navegar usando el ID del producto.
     Card(
         modifier = modifier
             .widthIn(min = 160.dp, max = 200.dp)
             .padding(vertical = 4.dp, horizontal = 4.dp)
-            .clickable { onProductClick(producto.id) }, // Usamos el SKU (String) para la navegación
+            .clickable { onProductClick(producto.id) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column {
+            // Imagen del producto usando Coil: carga asíncrona con placeholder y manejo de errores.
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(producto.imagenUrl)
@@ -61,20 +61,24 @@ fun ProductCard(
                 contentDescription = "Imagen de ${producto.nombre}",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f),
+                    .aspectRatio(1f), // Mantiene formato cuadrado para todas las tarjetas.
                 contentScale = ContentScale.Crop
             )
 
+            // Contenido textual: nombre + precio formateado según CLP.
             Column(modifier = Modifier.padding(12.dp)) {
+                // Nombre del producto con estilo destacado.
                 Text(
                     text = producto.nombre,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
+
                 Spacer(modifier = Modifier.height(4.dp))
+
+                // Precio usando formato chileno y mostrando la unidad del producto.
                 Text(
-                    // Usamos el Locale de Chile para el formato de moneda
                     text = "$${String.format(chileLocale, "%,.0f", producto.precio)} CLP / ${producto.unidad}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
@@ -85,13 +89,13 @@ fun ProductCard(
     }
 }
 
+// Vista previa para Composable Preview: facilita validar la UI durante el desarrollo.
 @Preview(showBackground = true, widthDp = 200)
 @Composable
 fun ProductCardPreview() {
-    // Datos de prueba actualizados con el nuevo campo databaseId
     val productoDeEjemplo = Producto(
-        id = "FR001",          // SKU (String)
-        databaseId = 100L,     // ID Numérico (Long) - ¡Nuevo!
+        id = "FR001",
+        databaseId = 100L,
         nombre = "Manzanas Fuji",
         descripcion = "Deliciosas manzanas.",
         precio = 1200.0,
@@ -101,6 +105,7 @@ fun ProductCardPreview() {
         origen = "Valle del Maule",
         unidad = "Kg"
     )
+
     HuertoHogarAppTheme {
         ProductCard(producto = productoDeEjemplo, onProductClick = {})
     }

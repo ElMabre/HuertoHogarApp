@@ -2,7 +2,8 @@ package com.huertohogar.app.model
 
 /**
  * Estado de la UI para la pantalla de Registro.
- * Contiene los valores de los campos y el estado de carga/error.
+ * Contiene los valores ingresados en cada campo del formulario,
+ * además de estados de visibilidad, carga y errores.
  */
 data class RegisterUiState(
     val nombre: String = "",
@@ -12,7 +13,7 @@ data class RegisterUiState(
     val password: String = "",
     val confirmPassword: String = "",
 
-    // --- Nuevos Campos ---
+    // --- Nuevos campos ---
     val region: String = "",
     val comuna: String = "",
     val direccion: String = "",
@@ -24,12 +25,12 @@ data class RegisterUiState(
 
     val errors: RegisterErrorState = RegisterErrorState(),
 
-    // Campo para el mensaje de error general (rojo) en la parte superior
     val registerErrorGlobal: String? = null
 )
 
 /**
- * Estado de errores de validación para el formulario de registro.
+ * Estado que almacena mensajes de error para cada campo del registro.
+ * Se usa para mostrar advertencias específicas bajo cada input.
  */
 data class RegisterErrorState(
     val nombre: String? = null,
@@ -38,8 +39,6 @@ data class RegisterErrorState(
     val email: String? = null,
     val password: String? = null,
     val confirmPassword: String? = null,
-
-    // --- Errores para Nuevos Campos ---
     val region: String? = null,
     val comuna: String? = null,
     val direccion: String? = null,
@@ -47,8 +46,8 @@ data class RegisterErrorState(
     val aceptaTerminos: String? = null
 ) {
     /**
-     * Función auxiliar para verificar rápidamente si el formulario es válido.
-     * Retorna true si todos los campos de error son nulos.
+     * Función que indica si el formulario está libre de errores.
+     * Retorna true cuando todos los campos de error son nulos.
      */
     fun hasNoErrors(): Boolean {
         return nombre == null && apellido == null && run == null && email == null &&

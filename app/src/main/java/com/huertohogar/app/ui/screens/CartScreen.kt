@@ -33,6 +33,7 @@ import com.huertohogar.app.model.CartUiState
 import com.huertohogar.app.viewmodel.CartViewModel
 import java.util.Locale
 
+// Objeto global para formateo consistente de moneda (Pesos Chilenos) en toda la pantalla.
 private val chileLocale: Locale = Locale.forLanguageTag("es-CL")
 
 @SuppressLint("DefaultLocale")
@@ -42,16 +43,22 @@ fun CartScreen(
     navController: NavController,
     cartViewModel: CartViewModel
 ) {
+    // Suscripción reactiva al estado del ViewModel.
+    // 'collectAsState' convierte el Flow de datos en un State de Compose.
+    // Si el ViewModel actualiza la lista o los totales, la UI se redibuja automáticamente.
     val cartUiState by cartViewModel.uiState.collectAsState()
 
-    // --- MANEJO DE ESTADOS DE CHECKOUT ---
+    // --- MANEJO DE EFECTOS DE UI (Feedback al usuario) ---
+    // Se usan condicionales simples basados en flags del estado para mostrar diálogos modales.
+    // Esto desacopla la lógica de visualización de la lógica de negocio.
 
-    // 1. Diálogo de Éxito
+    // 1. Diálogo de Éxito: Bloquea la interacción hasta que el usuario confirma.
     if (cartUiState.checkoutSuccess) {
         AlertDialog(
             onDismissRequest = {
+                // Limpiamos el estado antes de navegar para evitar bucles o datos residuales.
                 cartViewModel.resetCheckoutStatus()
-                navController.popBackStack() // Volvemos al Home o pantalla anterior
+                navController.popBackStack()
             },
             icon = { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             title = { Text("¡Compra Exitosa!") },
@@ -67,7 +74,7 @@ fun CartScreen(
         )
     }
 
-    // 2. Diálogo de Error
+    // 2. Diálogo de Error: Informa sin interrumpir el flujo de navegación.
     if (cartUiState.checkoutError != null) {
         AlertDialog(
             onDismissRequest = { cartViewModel.resetCheckoutStatus() },
@@ -84,6 +91,7 @@ fun CartScreen(
         )
     }
 
+    // Estructura base de la pantalla. Scaffold maneja los espacios seguros (TopBar, etc.)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -103,21 +111,28 @@ fun CartScreen(
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
 
+            // Lógica de Renderizado Condicional:
+            // Decide qué interfaz mostrar basándose en si hay datos, evitando mostrar una lista vacía.
             if (cartUiState.items.isEmpty() && !cartUiState.checkoutSuccess) {
                 // VISTA VACÍA
                 EmptyCartView(navController)
             } else {
-                // VISTA CON ITEMS
+                // VISTA CON ITEMS (Contenido principal)
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    // Lista
+                    // LazyColumn para renderizado eficiente de listas.
+                    // A diferencia de Column, recicla las vistas y solo dibuja lo que se ve en pantalla.
                     LazyColumn(modifier = Modifier.weight(1f)) {
+                        // 'key' ayuda a Compose a identificar cada item único, mejorando el rendimiento
+                        // y evitando errores visuales al borrar o reordenar elementos.
                         items(cartUiState.items, key = { it.producto.id }) { cartItem ->
                             CartListItem(
                                 cartItem = cartItem,
+                                // Lambda Hoisting: Pasamos eventos hacia arriba (al ViewModel)
+                                // en lugar de pasar el ViewModel hacia abajo.
                                 onQuantityChange = { qty -> cartViewModel.updateQuantity(cartItem.producto.id, qty) },
                                 onRemoveClick = { cartViewModel.removeFromCart(cartItem.producto.id) }
                             )
@@ -126,23 +141,28 @@ fun CartScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    // Componente separado para mostrar cálculos financieros.
                     CartSummary(cartUiState = cartUiState)
+
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Botones
+                    // Botones de Acción
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = { cartViewModel.clearCart() },
                             modifier = Modifier.weight(1f),
+                            // Deshabilitamos interacción durante estados de carga para evitar errores.
                             enabled = !cartUiState.isLoading
                         ) {
                             Text("Vaciar")
                         }
                         Button(
-                            onClick = { cartViewModel.realizarPedido() }, // ¡ACCIÓN PRINCIPAL!
+                            onClick = { cartViewModel.realizarPedido() }, // Dispara la lógica asíncrona (Red/BD)
                             modifier = Modifier.weight(1f),
                             enabled = !cartUiState.isLoading
                         ) {
+                            // Feedback visual inmediato dentro del botón mientras carga
                             if (cartUiState.isLoading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                             } else {
@@ -156,6 +176,8 @@ fun CartScreen(
     }
 }
 
+// Componente Stateless (sin estado) para la vista vacía.
+// Recibe solo lo necesario (navController) para redirigir al usuario.
 @Composable
 fun EmptyCartView(navController: NavController) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -176,6 +198,9 @@ fun EmptyCartView(navController: NavController) {
     }
 }
 
+// Item individual de la lista.
+// Se mantiene puro (sin ViewModel dentro), recibiendo datos y emitiendo eventos via lambdas.
+// Esto lo hace reutilizable y fácil de previsualizar o testear.
 @Composable
 private fun CartListItem(
     cartItem: CartItem,
@@ -186,6 +211,8 @@ private fun CartListItem(
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Carga asíncrona de imágenes (usando librería Coil).
+        // Maneja automáticamente placeholders y estados de error.
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(cartItem.producto.imagenUrl)
@@ -198,6 +225,8 @@ private fun CartListItem(
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(16.dp))
+
+        // Información textual del producto
         Column(modifier = Modifier.weight(1f)) {
             Text(cartItem.producto.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
@@ -211,6 +240,8 @@ private fun CartListItem(
                 color = MaterialTheme.colorScheme.primary
             )
         }
+
+        // Controles de manipulación (Borrar y +/- cantidad)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             IconButton(onClick = onRemoveClick) {
                 Icon(Icons.Default.Delete, contentDescription = "Borrar", tint = MaterialTheme.colorScheme.error)
@@ -228,6 +259,8 @@ private fun CartListItem(
     }
 }
 
+// Componente para resumir los costos.
+// Separado para mantener el código principal (CartScreen) limpio y legible.
 @Composable
 private fun CartSummary(cartUiState: CartUiState) {
     Card(elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {

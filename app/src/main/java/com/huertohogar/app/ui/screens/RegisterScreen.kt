@@ -22,37 +22,48 @@ import com.huertohogar.app.navigation.AppScreens
 import com.huertohogar.app.utils.ChileLocations
 import com.huertohogar.app.viewmodel.RegisterViewModel
 
+// Pantalla de Registro.
+// Aquí está todo el formulario para crear usuarios nuevos.
+// Usamos el ViewModel para guardar lo que escribe el usuario y no perderlo si gira la pantalla.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     navController: NavController,
     viewModel: RegisterViewModel = viewModel()
 ) {
+    // Conectamos con el ViewModel.
+    // 'collectAsState' hace que la pantalla se vuelva a dibujar sola si cambian los datos (ej: sale un error).
     val state by viewModel.uiState.collectAsState()
 
-    // Variables para controlar los dropdowns
+    // Estados solo visuales (UI).
+    // Estos no van al ViewModel porque solo controlan si un menú está abierto o cerrado.
     var regionExpanded by remember { mutableStateOf(false) }
     var comunaExpanded by remember { mutableStateOf(false) }
 
-    // Variable local para visibilidad de la contraseña
+    // Control para mostrar u ocultar la contraseña (los puntitos).
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Obtenemos comunas según la región seleccionada
+    // Lógica para filtrar comunas.
+    // Esta lista cambia automáticamente cuando el usuario elige una región diferente en 'state.region'.
     val comunasDisponibles = ChileLocations.regionesYComunas[state.region] ?: emptyList()
 
     Scaffold { innerPadding ->
+        // Contenedor principal con Scroll.
+        // Es MUY importante poner 'verticalScroll' porque en móviles pequeños o cuando sale el teclado,
+        // el botón de "Registrar" se quedaría fuera de la pantalla.
         Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()), // Scroll si el contenido es largo
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("Crear Cuenta", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
 
-            // --- ERROR GLOBAL ---
+            // Mensaje de Error Animado.
+            // Si hay un error global (como "El usuario ya existe"), aparece suavemente en vez de saltar de golpe.
             AnimatedVisibility(visible = state.registerErrorGlobal != null) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
@@ -66,7 +77,10 @@ fun RegisterScreen(
                 }
             }
 
-            // --- NOMBRE ---
+            // --- CAMPOS DE TEXTO ---
+            // Todos funcionan igual: muestran el valor del estado y avisan al ViewModel cuando escribes algo.
+
+            // Nombre
             OutlinedTextField(
                 value = state.nombre,
                 onValueChange = { viewModel.onNombreChange(it) },
@@ -77,7 +91,7 @@ fun RegisterScreen(
                 singleLine = true
             )
 
-            // --- APELLIDO ---
+            // Apellido
             OutlinedTextField(
                 value = state.apellido,
                 onValueChange = { viewModel.onApellidoChange(it) },
@@ -88,7 +102,7 @@ fun RegisterScreen(
                 singleLine = true
             )
 
-            // --- RUN ---
+            // RUN
             OutlinedTextField(
                 value = state.run,
                 onValueChange = { viewModel.onRunChange(it) },
@@ -99,15 +113,18 @@ fun RegisterScreen(
                 singleLine = true
             )
 
-            // --- SELECTOR DE REGIÓN ---
+            // --- MENÚS DESPLEGABLES (DROPDOWNS) ---
+            // Usamos 'ExposedDropdownMenuBox' que es el estándar moderno de Android.
+
+            // Selector de Región
             ExposedDropdownMenuBox(
                 expanded = regionExpanded,
                 onExpandedChange = { regionExpanded = !regionExpanded }
             ) {
                 OutlinedTextField(
                     value = state.region,
-                    onValueChange = {},
-                    readOnly = true,
+                    onValueChange = {}, // Vacío porque el usuario no escribe, solo selecciona
+                    readOnly = true,    // Para que no salga el teclado
                     label = { Text("Región") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = regionExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
@@ -130,7 +147,8 @@ fun RegisterScreen(
                 }
             }
 
-            // --- SELECTOR DE COMUNA ---
+            // Selector de Comuna (Dependiente)
+            // Este menú es "listo": se bloquea (enabled = false) si no has elegido región primero.
             ExposedDropdownMenuBox(
                 expanded = comunaExpanded,
                 onExpandedChange = { if (state.region.isNotEmpty()) comunaExpanded = !comunaExpanded }
@@ -141,7 +159,7 @@ fun RegisterScreen(
                     readOnly = true,
                     label = { Text("Comuna") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = comunaExpanded) },
-                    enabled = state.region.isNotEmpty(), // Deshabilitado si no hay región
+                    enabled = state.region.isNotEmpty(), // Aquí está el truco para bloquearlo
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
                     isError = state.errors.comuna != null,
                     supportingText = { state.errors.comuna?.let { error -> Text(error) } }
@@ -162,7 +180,7 @@ fun RegisterScreen(
                 }
             }
 
-            // --- DIRECCIÓN ---
+            // Dirección
             OutlinedTextField(
                 value = state.direccion,
                 onValueChange = { viewModel.onDireccionChange(it) },
@@ -173,7 +191,7 @@ fun RegisterScreen(
                 singleLine = true
             )
 
-            // --- EMAIL ---
+            // Email (con teclado especial de correo)
             OutlinedTextField(
                 value = state.email,
                 onValueChange = { viewModel.onEmailChange(it) },
@@ -185,12 +203,13 @@ fun RegisterScreen(
                 singleLine = true
             )
 
-            // --- PASSWORD ---
+            // Contraseña (con el ojito para ver/ocultar)
             OutlinedTextField(
                 value = state.password,
                 onValueChange = { viewModel.onPasswordChange(it) },
                 label = { Text("Contraseña") },
                 modifier = Modifier.fillMaxWidth(),
+                // Aquí cambiamos entre ver texto normal o puntitos
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 isError = state.errors.password != null,
@@ -208,15 +227,18 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- BOTÓN DE REGISTRO ---
+            // Botón de Registrarse.
+            // Si está cargando muestra el círculo, si no, muestra el botón.
             if (state.isLoading) {
                 CircularProgressIndicator()
             } else {
                 Button(
                     onClick = {
+                        // Enviamos la función de navegar como "callback".
+                        // Así solo cambiamos de pantalla si el registro funcionó de verdad.
                         viewModel.onRegisterClicked {
-                            // Al ser exitoso, navegamos al Home
                             navController.navigate(AppScreens.HomeScreen.route) {
+                                // Esto borra el historial para que no puedas volver al registro con "atrás"
                                 popUpTo(AppScreens.LoginScreen.route) { inclusive = true }
                             }
                         }
@@ -227,7 +249,7 @@ fun RegisterScreen(
                 }
             }
 
-            // Link para volver al Login
+            // Link simple para ir al Login si te equivocaste de pantalla
             TextButton(onClick = { navController.navigate(AppScreens.LoginScreen.route) }) {
                 Text("¿Ya tienes cuenta? Iniciar Sesión")
             }

@@ -19,24 +19,28 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
+// pruebas para ver el detalle del producto
+// revisamos que cargue la info bien y que no explote si el id esta mal o no hay internet
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProductDetailViewModelTest {
 
     private lateinit var viewModel: ProductDetailViewModel
 
-    // Mockeamos el repositorio y la aplicación
+    // mocks basicos. usamos relaxed=true para que no molesten con errores si no configuramos todo
     private val mockRepository = mockk<ProductRepository>(relaxed = true)
     private val mockApplication = mockk<Application>(relaxed = true)
 
-    // Dispatcher para controlar los tiempos de las corrutinas en el test
+    // dispatcher para que las corrutinas no den problemas en los tests y corran sincronizadas
     private val testDispatcher = StandardTestDispatcher()
 
+    // configuracion inicial. aqui hay un truco importante con reflexion
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         viewModel = ProductDetailViewModel(mockApplication)
 
-        // Inyección "manual" usando reflexión para acceder a la variable privada 'repository' del ViewModel
+        // inyeccion "a la fuerza" usando reflexion porque la variable repository es privada en el viewmodel
+        // es un poco sucio pero necesario si no queremos cambiar el codigo original solo para testear
         val repoField = ProductDetailViewModel::class.java.getDeclaredField("repository")
         repoField.isAccessible = true
         repoField.set(viewModel, mockRepository)
@@ -47,6 +51,8 @@ class ProductDetailViewModelTest {
         Dispatchers.resetMain()
     }
 
+    // caso feliz: simulamos que el repo encuentra el producto
+    // revisamos que la UI muestre los datos y quite el loading
     @Test
     fun `loadProductDetails carga producto exitosamente`() = runTest {
         // DADO: Un ID válido y un repositorio que devuelve un producto simulado
@@ -81,6 +87,8 @@ class ProductDetailViewModelTest {
         assertNull(state.error) // No debe haber errores
     }
 
+    // probamos que pasa si buscamos un id que no existe
+    // el repo devuelve null y nosotros esperamos un mensaje de error en la pantalla
     @Test
     fun `loadProductDetails muestra error si el producto no existe`() = runTest {
         // DADO: Un ID que el repositorio no encuentra (devuelve null)
@@ -100,6 +108,8 @@ class ProductDetailViewModelTest {
         assert(state.error!!.contains("no existe") || state.error!!.contains("eliminado"))
     }
 
+    // simulacion de fallo de red. si el repo tira excepcion
+    // el viewmodel tiene que atraparla y mostrar mensaje en vez de cerrarse
     @Test
     fun `loadProductDetails maneja excepciones de red`() = runTest {
         // DADO: El repositorio falla lanzando una excepción (simulando error de internet)
@@ -118,6 +128,8 @@ class ProductDetailViewModelTest {
         assert(state.error!!.contains("Fallo de conexión"))
     }
 
+    // test extra para coverage. si llega un id nulo
+    // tiene que validar antes de intentar buscar y gastar recursos
     @Test
     fun `loadProductDetails con ID nulo muestra error`() = runTest {
         // ESTE ES EL TEST NUEVO PARA MEJORAR EL COVERAGE

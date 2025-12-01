@@ -7,12 +7,16 @@ import com.huertohogar.app.data.remote.model.PedidoResponseDto
 import com.huertohogar.app.model.CartItem
 import retrofit2.Response
 
+/**
+ * Repositorio encargado de gestionar las operaciones relacionadas con pedidos.
+ */
 class OrderRepository {
 
     private val api = RetrofitClient.orderApi
 
     /**
-     * Envía un pedido al servidor.
+     * Crea un pedido a partir de los productos del carrito.
+     * Prepara la lista de detalles y envía la solicitud al servidor.
      */
     suspend fun createOrder(token: String, cartItems: List<CartItem>, total: Double): Response<PedidoResponseDto> {
         val detallesDto = cartItems.map { item ->
@@ -33,8 +37,8 @@ class OrderRepository {
     }
 
     /**
-     * CORRECCIÓN: Ahora devuelve el objeto Response completo.
-     * Esto permite al ViewModel acceder a .isSuccessful, .code() y .body().
+     * Obtiene los pedidos del usuario autenticado.
+     * El Response completo permite revisar el estado HTTP y la data recibida.
      */
     suspend fun getMyOrders(token: String): Response<List<PedidoResponseDto>> {
         val authToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
@@ -42,7 +46,8 @@ class OrderRepository {
     }
 
     /**
-     * CORRECCIÓN: Ahora devuelve Response<Void> para poder verificar el código de error.
+     * Solicita la cancelación de un pedido por su ID.
+     * Retorna un Response<Void> para evaluar el código de respuesta del servidor.
      */
     suspend fun cancelOrder(token: String, orderId: Long): Response<Void> {
         val authToken = if (token.startsWith("Bearer ")) token else "Bearer $token"

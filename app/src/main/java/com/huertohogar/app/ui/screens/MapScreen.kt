@@ -22,16 +22,23 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.huertohogar.app.model.HuertoHogarStores
 
+// Pantalla dedicada a la integración con Google Maps SDK.
+// No maneja lógica de negocio compleja (ViewModel), ya que solo visualiza datos estáticos de ubicación.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(navController: NavController) {
-    // Centrar el mapa inicialmente en Santiago
+    // Coordenada central inicial (Santiago).
     val santiagoLocation = LatLng(-33.4489, -70.6693)
 
+    // Estado de la Cámara del Mapa.
+    // Usamos 'rememberCameraPositionState' para que la posición y el zoom sobrevivan a recomposiciones.
+    // Si usáramos una variable normal, el mapa se resetearía a la posición inicial con cada cambio en la UI.
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(santiagoLocation, 10f)
     }
 
+    // Estructura base.
+    // Provee la barra superior para navegación simple (volver atrás), encapsulando el mapa en el área de contenido.
     Scaffold(
         topBar = {
             TopAppBar(
@@ -52,11 +59,15 @@ fun MapScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Componente Composable oficial de Google Maps.
+            // Actúa como contenedor para los elementos del mapa (marcadores, polígonos, etc.).
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState
             ) {
-                // Recorremos la lista de tiendas del modelo y creamos un marcador por cada una
+                // Renderizado dinámico de marcadores.
+                // Iteramos sobre la lista de datos (Model) para generar puntos visuales en el mapa.
+                // 'Snippet' permite mostrar información adicional (dirección) al hacer clic en el pin.
                 HuertoHogarStores.list.forEach { store ->
                     Marker(
                         state = MarkerState(position = store.location),

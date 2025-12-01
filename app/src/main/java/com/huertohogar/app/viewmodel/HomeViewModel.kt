@@ -11,33 +11,37 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel para la pantalla de inicio (HomeScreen).
+ * ViewModel para la pantalla principal.
+ * Usamos ViewModel estándar porque no necesitamos acceso al Contexto de la App.
  */
 class HomeViewModel : ViewModel() {
 
+    // Instancia simple del repositorio para obtener los datos.
     private val repository = ProductRepository()
 
-    // Estado de la UI
+    // Gestión del Estado:
+    // _uiState es privado para editarlo aquí, uiState es público para leerlo en la UI.
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    // El bloque init ejecuta la carga de datos automáticamente al abrir la pantalla.
     init {
         cargarProductosDestacados()
     }
 
+    // Función asíncrona que usa una corrutina (viewModelScope) para no congelar la pantalla.
     private fun cargarProductosDestacados() {
         viewModelScope.launch {
+            // Activamos el indicador de carga antes de pedir datos.
             _uiState.update { it.copy(isLoading = true) }
 
             try {
-                // 1. Llamada al Repositorio
-                // CORRECCIÓN: Usamos getAllProducts() que ya devuelve la lista limpia (con .trim() en las URLs)
                 val listaProductos = repository.getAllProducts()
 
-                // 2. Lógica de Negocio: Tomamos los primeros 5 como "Destacados"
+                // Filtramos solo los primeros 5 productos para la sección "Destacados".
                 val destacados = listaProductos.take(5)
 
-                // 3. Actualizamos la UI
+                // Actualizamos el estado con la lista lista y apagamos la carga.
                 _uiState.update {
                     it.copy(
                         productosDestacados = destacados,
@@ -46,6 +50,7 @@ class HomeViewModel : ViewModel() {
                 }
 
             } catch (e: Exception) {
+                // Si falla, evitamos que la app se cierre y dejamos la lista vacía.
                 e.printStackTrace()
                 _uiState.update {
                     it.copy(
@@ -59,7 +64,7 @@ class HomeViewModel : ViewModel() {
 }
 
 /**
- * Estado de la UI para HomeScreen.
+ * Clase de datos que agrupa todo lo que la pantalla necesita mostrar (Lista y estado de carga).
  */
 data class HomeUiState(
     val productosDestacados: List<Producto> = emptyList(),

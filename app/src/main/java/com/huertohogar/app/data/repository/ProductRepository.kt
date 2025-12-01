@@ -4,11 +4,19 @@ import com.huertohogar.app.data.remote.RetrofitClient
 import com.huertohogar.app.data.remote.model.ProductDto
 import com.huertohogar.app.model.Producto
 
+/**
+ * Repositorio encargado de obtener productos desde el servicio remoto.
+ * Provee funciones para listar productos y obtener detalles individuales.
+ */
 class ProductRepository {
 
-    // Usamos la API de catálogo configurada en RetrofitClient
+    // API de catálogo configurada en RetrofitClient.
     private val api = RetrofitClient.productApi
 
+    /**
+     * Obtiene el listado completo de productos desde el backend.
+     * Devuelve una lista vacía si ocurre un error en la solicitud.
+     */
     suspend fun getAllProducts(): List<Producto> {
         try {
             val response = api.getAllProductos()
@@ -21,9 +29,12 @@ class ProductRepository {
         return emptyList()
     }
 
+    /**
+     * Obtiene un producto específico utilizando su SKU.
+     * Retorna null si no se encuentra o si ocurre un error.
+     */
     suspend fun getProductById(sku: String): Producto? {
         try {
-            // Buscamos por SKU en la API
             val response = api.getProductoBySku(sku)
             if (response.isSuccessful && response.body() != null) {
                 return response.body()!!.toDomain()
@@ -34,13 +45,16 @@ class ProductRepository {
         return null
     }
 
-    // --- FUNCIÓN DE MAPEO ACTUALIZADA ---
+    /**
+     * Convierte un ProductDto recibido desde la API al modelo de dominio Producto.
+     * Se asignan valores por defecto para evitar fallos por datos incompletos.
+     */
     private fun ProductDto.toDomain(): Producto {
         return Producto(
-            // 1. Mapeamos el SKU al campo 'id' (usado para navegación en la app)
+            // Identificador de negocio utilizado para navegación.
             id = this.sku ?: "SIN_SKU",
 
-            // 2. Mapeamos el ID numérico de la BD al nuevo campo 'databaseId' (usado para pedidos)
+            // Identificador técnico utilizado en operaciones como creación de pedidos.
             databaseId = this.id ?: 0L,
 
             nombre = this.nombre ?: "Sin Nombre",
@@ -48,8 +62,10 @@ class ProductRepository {
             precio = this.precio ?: 0.0,
             stock = this.stock ?: 0,
             categoria = this.categoria ?: "General",
-            // Limpiamos la URL de espacios en blanco por seguridad
+
+            // La URL se limpia para evitar errores por espacios en blanco.
             imagenUrl = this.imagenUrl?.trim() ?: "",
+
             origen = this.origen ?: "Chile",
             unidad = this.unidad ?: "Unidad"
         )

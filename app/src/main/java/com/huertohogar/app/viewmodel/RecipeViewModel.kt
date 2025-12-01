@@ -12,33 +12,43 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Estado de la UI actualizado.
- * Ahora incluye 'selectedRecipe' para cuando el usuario hace clic en una foto.
+ * Estado completo de la pantalla de Recetas.
+ * Agrupa tanto la lista de resultados (vitrina) como el detalle de una receta seleccionada.
+ * Esto permite manejar toda la navegación y datos de esta sección en un solo lugar.
  */
 data class RecipeUiState(
-    val recipes: List<RecipeDto> = emptyList(),       // Lista para la vitrina
-    val selectedRecipe: RecipeDetailDto? = null,      // El detalle del plato seleccionado
+    val recipes: List<RecipeDto> = emptyList(),       // Lista de resumen para la búsqueda
+    val selectedRecipe: RecipeDetailDto? = null,      // Detalle completo para la vista individual
     val isLoading: Boolean = false,
     val error: String? = null
 )
 
+/**
+ * ViewModel para el buscador de recetas.
+ * Hereda de ViewModel estándar (no AndroidViewModel) porque no requiere Contexto.
+ */
 class RecipeViewModel : ViewModel() {
 
+    // Repositorio encargado de la comunicación con la API de recetas (ej. TheMealDB).
     private val repository = RecipeRepository()
 
+    // Gestión de Estado UI reactivo.
     private val _uiState = MutableStateFlow(RecipeUiState())
     val uiState: StateFlow<RecipeUiState> = _uiState.asStateFlow()
 
+    // Carga inicial:
+    // Al abrir la pantalla, buscamos algo por defecto para que no aparezca vacía.
     init {
-        // Carga inicial por defecto
         searchRecipes("Chicken")
     }
 
     /**
-     * Busca lista de recetas (Vitrina).
+     * Busca recetas generales por ingrediente.
+     * Actualiza la lista 'recipes' del estado para mostrar la vitrina.
      */
     fun searchRecipes(ingredient: String) {
         viewModelScope.launch {
+            // Limpiamos errores y selección previa al iniciar una nueva búsqueda.
             _uiState.update { it.copy(isLoading = true, error = null, selectedRecipe = null) }
 
             try {
@@ -61,12 +71,12 @@ class RecipeViewModel : ViewModel() {
     }
 
     /**
-     * Busca el detalle de UNA receta específica por su ID.
-     * Se llama cuando el usuario hace clic en una tarjeta.
+     * Obtiene los datos extendidos de una receta específica (Instrucciones, medidas, etc.).
+     * Se invoca al hacer clic en una tarjeta de la lista.
      */
     fun getRecipeDetail(id: String) {
         viewModelScope.launch {
-            // Mantenemos la lista de fondo, pero activamos carga
+            // Mantenemos la lista de fondo visible, pero mostramos carga.
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
@@ -93,8 +103,9 @@ class RecipeViewModel : ViewModel() {
     }
 
     /**
-     * Limpia la receta seleccionada.
-     * Útil para cuando volvemos de la pantalla de detalle a la lista, para que no se quede "pegada" la anterior.
+     * Resetea la selección activa.
+     * Vital para la navegación: al volver de la pantalla de detalle a la lista,
+     * limpiamos el 'selectedRecipe' para evitar que se muestre brevemente al entrar a otra receta.
      */
     fun clearSelectedRecipe() {
         _uiState.update { it.copy(selectedRecipe = null) }

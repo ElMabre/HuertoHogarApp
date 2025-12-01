@@ -1,7 +1,8 @@
 package com.huertohogar.app.model
 
 /**
- * Estado de la UI para la pantalla de Login.
+ * Estado que representa todos los datos necesarios para manejar la pantalla de Login.
+ * Incluye los campos del formulario, estados visuales y mensajes de error.
  */
 data class LoginUiState(
     val email: String = "",
@@ -9,11 +10,12 @@ data class LoginUiState(
     val passwordVisible: Boolean = false,
     val isLoading: Boolean = false,
     val errors: LoginErrorState = LoginErrorState(),
-    val loginError: String? = null // <--- ¡ESTO FALTABA!
+    val loginError: String? = null
 )
 
 /**
- * Estado de errores de validación de campos individuales.
+ * Representa errores específicos de los campos del formulario.
+ * Se usa para mostrar mensajes debajo de inputs individuales.
  */
 data class LoginErrorState(
     val email: String? = null,
