@@ -12,18 +12,21 @@ pluginManagement {
         maven {
             url = uri("https://maven.pkg.github.com/ElMabre/HuertoHogarApp")
 
-            // Solo intentar configurar credenciales SI existen en un archivo gradle.properties
-            // Esto evita que el build falle para usuarios nuevos.
             if (extra.has("gpr.user") && extra.has("gpr.key")) {
                 credentials {
                     username = extra["gpr.user"] as String
                     password = extra["gpr.key"] as String
                 }
             }
-
         }
     }
 }
+
+
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
+// --------------------
 
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
@@ -31,10 +34,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-    
+
         maven {
             url = uri("https://maven.pkg.github.com/ElMabre/HuertoHogarApp")
-        
+
             if (extra.has("gpr.user") && extra.has("gpr.key")) {
                 credentials {
                     username = extra["gpr.user"] as String

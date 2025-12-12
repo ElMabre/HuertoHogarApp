@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp") version "2.2.21-2.0.4"
 }
 
 android {
@@ -23,7 +24,6 @@ android {
 
     signingConfigs {
         create("release") {
-
             storeFile = file("keystore.jks")
             storePassword = "252532"
             keyAlias = "huertohogar-key"
@@ -80,6 +80,12 @@ dependencies {
     implementation(libs.squareup.converter.gson)
     implementation(libs.squareup.okhttp)
 
+    // Persistencia Local (Room Database)
+    val room_version = "2.8.4"
+    implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
+
     // Google Maps
     implementation(libs.google.maps.compose)
     implementation(libs.google.play.services.maps)
@@ -98,8 +104,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-    }
+kotlin {
+    jvmToolchain(11)
 }

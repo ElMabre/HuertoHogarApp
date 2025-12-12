@@ -1,14 +1,12 @@
 package com.huertohogar.app.model
 
 /**
- * Representa el estado completo de la UI para la pantalla del carrito de compras.
- * Contiene la lista de items, el subtotal y el total.
- * También maneja estados relacionados al proceso de pago (Checkout).
+ * Estado de la UI del Carrito.
+ * Usamos propiedades calculadas (get) para subtotal, envío y total.
+ * Esto asegura que siempre estén sincronizados con la lista de items.
  */
 data class CartUiState(
     val items: List<CartItem> = emptyList(),
-
-    // Estados para manejar el flujo del proceso de compra
     val isLoading: Boolean = false,
     val checkoutSuccess: Boolean = false,
     val checkoutError: String? = null
@@ -16,11 +14,14 @@ data class CartUiState(
     val subtotal: Double
         get() = items.sumOf { it.subtotal }
 
+    // Si hay productos y el subtotal es menor a 15.000, cobra envío.
+    // Si supera los 15.000, es gratis.
     val costoEnvio: Double
-        get() = if (items.isNotEmpty()) 3500.0 else 0.0
+        get() = if (items.isNotEmpty() && subtotal < 15000) 3500.0 else 0.0
 
     val total: Double
         get() = subtotal + costoEnvio
+
     val numeroTotalItems: Int
         get() = items.sumOf { it.cantidad }
 }
