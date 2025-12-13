@@ -20,19 +20,31 @@ import org.jetbrains.annotations.VisibleForTesting
 import retrofit2.HttpException
 import java.io.IOException
 
-class CartViewModel(application: Application) : AndroidViewModel(application) {
+class CartViewModel(
+    application: Application,
+    // Dependencias inyectables en el constructor primario para Testing
+    private val sessionManagerProvider: SessionManager,
+    private val cartRepositoryProvider: CartRepository,
+    private val orderRepositoryProvider: OrderRepository
+) : AndroidViewModel(application) {
 
-    private val database = AppDatabase.getDatabase(application)
+    // Constructor secundario usado por la App (AndroidViewModelFactory)
+    constructor(application: Application) : this(
+        application,
+        SessionManager(application),
+        CartRepository(AppDatabase.getDatabase(application).cartDao()),
+        OrderRepository()
+    )
 
-    // MODIFICACIÓN 1: Cambiado a 'var' y @VisibleForTesting para permitir mocks en los tests
+    // Propiedades públicas para acceso si es necesario, inicializadas desde los parámetros
     @VisibleForTesting
-    var cartRepository = CartRepository(database.cartDao())
+    var sessionManager = sessionManagerProvider
 
     @VisibleForTesting
-    var sessionManager = SessionManager(application)
+    var cartRepository = cartRepositoryProvider
 
     @VisibleForTesting
-    var orderRepository = OrderRepository()
+    var orderRepository = orderRepositoryProvider
 
     private val _uiState = MutableStateFlow(CartUiState())
     val uiState: StateFlow<CartUiState> = _uiState.asStateFlow()
@@ -41,12 +53,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
+            // Ahora usa la instancia inyectada correctamente desde el inicio
             sessionManager.userId.collectLatest { userId ->
                 currentUserId = userId
                 if (userId != null) {
-                    // Nos suscribimos a la BD local.
-                    // Al recibir nuevos items, solo actualizamos 'items'.
-                    // El total y el envío se recalculan solos en CartUiState.
                     cartRepository.getCartItems(userId).collect { items ->
                         _uiState.update {
                             it.copy(
@@ -144,12 +154,10 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
             } catch (e: IOException) {
-                // MODIFICACIÓN 2: Manejo específico de error de red
                 _uiState.update {
                     it.copy(isLoading = false, checkoutError = "Sin conexión a internet")
                 }
             } catch (e: HttpException) {
-                // MODIFICACIÓN 2: Manejo específico de error HTTP
                 _uiState.update {
                     it.copy(isLoading = false, checkoutError = "Error del servidor: ${e.message()}")
                 }

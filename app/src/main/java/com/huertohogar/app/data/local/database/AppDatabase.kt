@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.huertohogar.app.data.local.dao.CartDao
 import com.huertohogar.app.data.local.entity.CartEntity
 
-@Database(entities = [CartEntity::class], version = 1, exportSchema = false)
+@Database(entities = [CartEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     // Exponemos los DAOs
@@ -25,7 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "huertohogar_database"
                 )
-                    // .fallbackToDestructiveMigration() // Descomentar si cambia la BD y no hay que migrar datos
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

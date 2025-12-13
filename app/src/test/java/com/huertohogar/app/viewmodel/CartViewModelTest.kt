@@ -21,9 +21,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -42,32 +40,38 @@ class CartViewModelTest {
     private val dbFlow = MutableStateFlow<List<CartItem>>(emptyList())
     private val testDispatcher = StandardTestDispatcher()
 
-    // Definición de Producto usando argumentos nombrados para evitar errores de tipo
+    // Definición de Producto
     private val productoPrueba = Producto(
         id = "1",
         databaseId = 100L,
         nombre = "Manzana",
         descripcion = "Roja y dulce",
-        precio = 1000.0,      // Double
+        precio = 1000.0,
         stock = 10,
         categoria = "Frutas",
         imagenUrl = "http://img.com/a.png",
-        origen = "Chile",     // String
-        unidad = "Kg"         // String
+        origen = "Chile",
+        unidad = "Kg"
     )
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
 
+        // Simulamos usuario logueado con ID 10
         every { mockSessionManager.userId } returns flowOf(10L)
+        // Simulamos el flujo del carrito
         every { mockCartRepository.getCartItems(any()) } returns dbFlow
 
-        viewModel = CartViewModel(mockApplication)
-        viewModel.cartRepository = mockCartRepository
-        viewModel.orderRepository = mockOrderRepository
-        viewModel.sessionManager = mockSessionManager
+        // Inyección de dependencias en el constructor
+        viewModel = CartViewModel(
+            mockApplication,
+            mockSessionManager,
+            mockCartRepository,
+            mockOrderRepository
+        )
 
+        // Ejecutar tareas iniciales (el init del ViewModel)
         testDispatcher.scheduler.advanceUntilIdle()
     }
 
@@ -101,6 +105,7 @@ class CartViewModelTest {
     fun `total incluye costo de envio (3500) cuando hay productos`() = runTest {
         val itemsDesdeBD = listOf(CartItem(productoPrueba, 2))
         dbFlow.emit(itemsDesdeBD)
+        // IMPORTANTE: Dejar que el ViewModel procese el emit antes de verificar
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -122,12 +127,24 @@ class CartViewModelTest {
 
     @Test
     fun `realizarPedido exitoso limpia el carrito`() = runTest {
+        // 1. Emitir items al carrito
         dbFlow.emit(listOf(CartItem(productoPrueba, 1)))
+
+        // 2. CORRECCIÓN CLAVE: Esperar a que el ViewModel reciba los items y actualice el estado
+        testDispatcher.scheduler.advanceUntilIdle()
+
         every { mockSessionManager.authToken } returns flowOf("fake-token")
 
-        val responseDto = PedidoResponseDto(99L, "2023", "PENDIENTE", 5500.0, "EFECTIVO")
+        val responseDto = PedidoResponseDto(
+            id = 99L,
+            fecha = "2023",
+            estado = "PENDIENTE",
+            total = 5500.0,
+            metodoPago = "EFECTIVO"
+        )
         coEvery { mockOrderRepository.createOrder(any(), any(), any()) } returns Response.success(responseDto)
 
+        // 3. Ahora sí llamamos a realizarPedido, sabiendo que items no está vacío
         viewModel.realizarPedido()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -137,8 +154,13 @@ class CartViewModelTest {
 
     @Test
     fun `realizarPedido falla si no hay usuario logueado`() = runTest {
+        // 1. Emitir items
         dbFlow.emit(listOf(CartItem(productoPrueba, 1)))
-        every { mockSessionManager.authToken } returns flowOf("")
+
+        // 2. CORRECCIÓN CLAVE: Esperar actualización de estado
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        every { mockSessionManager.authToken } returns flowOf("") // Token vacío simula error sesión
 
         viewModel.realizarPedido()
         testDispatcher.scheduler.advanceUntilIdle()
