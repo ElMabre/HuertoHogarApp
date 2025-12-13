@@ -17,15 +17,20 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.VisibleForTesting
+import retrofit2.HttpException
 import java.io.IOException
 
 class CartViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
-    private val cartRepository = CartRepository(database.cartDao())
+
+    // MODIFICACIÓN 1: Cambiado a 'var' y @VisibleForTesting para permitir mocks en los tests
+    @VisibleForTesting
+    var cartRepository = CartRepository(database.cartDao())
 
     @VisibleForTesting
     var sessionManager = SessionManager(application)
+
     @VisibleForTesting
     var orderRepository = OrderRepository()
 
@@ -57,7 +62,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // --- Funciones de Gestión (Igual que antes) ---
+    // --- Funciones de Gestión del Carrito ---
 
     fun addToCart(producto: Producto) {
         val userId = currentUserId ?: return
@@ -102,7 +107,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // --- Checkout ---
+    // --- Checkout (Realizar Pedido) ---
 
     fun realizarPedido() {
         val currentState = _uiState.value
@@ -123,7 +128,7 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                 val response = orderRepository.createOrder(
                     token = token,
                     cartItems = currentState.items,
-                    total = currentState.total // Aquí lee el total correcto calculado en UiState
+                    total = currentState.total
                 )
 
                 if (response.isSuccessful) {
@@ -132,17 +137,26 @@ class CartViewModel(application: Application) : AndroidViewModel(application) {
                         it.copy(isLoading = false, checkoutSuccess = true, items = emptyList())
                     }
                 } else {
+                    val errorMsg = "Error al crear pedido: ${response.code()}"
                     _uiState.update {
-                        it.copy(isLoading = false, checkoutError = "Error: ${response.code()}")
+                        it.copy(isLoading = false, checkoutError = errorMsg)
                     }
                 }
 
-            } catch (e: Exception) {
-                val errorMsg = when(e) {
-                    is IOException -> "Sin conexión a internet"
-                    else -> "Error: ${e.message}"
+            } catch (e: IOException) {
+                // MODIFICACIÓN 2: Manejo específico de error de red
+                _uiState.update {
+                    it.copy(isLoading = false, checkoutError = "Sin conexión a internet")
                 }
-                _uiState.update { it.copy(isLoading = false, checkoutError = errorMsg) }
+            } catch (e: HttpException) {
+                // MODIFICACIÓN 2: Manejo específico de error HTTP
+                _uiState.update {
+                    it.copy(isLoading = false, checkoutError = "Error del servidor: ${e.message()}")
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isLoading = false, checkoutError = "Error inesperado: ${e.message}")
+                }
             }
         }
     }

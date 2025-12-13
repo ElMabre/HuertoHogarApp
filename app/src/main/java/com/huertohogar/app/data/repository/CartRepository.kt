@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.map
 
 class CartRepository(private val cartDao: CartDao) {
 
-    // Obtiene los items y los convierte automáticamente de "Formato Base de Datos" a "Formato App"
     fun getCartItems(userId: Long): Flow<List<CartItem>> {
         return cartDao.getCartItems(userId).map { entities ->
             entities.map { entity ->
@@ -19,7 +18,7 @@ class CartRepository(private val cartDao: CartDao) {
                         databaseId = entity.databaseId,
                         nombre = entity.nombre,
                         descripcion = entity.descripcion,
-                        precio = entity.precio,
+                        precio = entity.precio, // Ahora ambos son Double, no habrá error
                         stock = entity.stock,
                         categoria = entity.categoria,
                         imagenUrl = entity.imagenUrl,
@@ -33,45 +32,37 @@ class CartRepository(private val cartDao: CartDao) {
     }
 
     suspend fun addToCart(userId: Long, producto: Producto) {
-        // Creamos la entidad para guardarla
         val itemEntity = CartEntity(
             userId = userId,
             productId = producto.id,
+            databaseId = producto.databaseId,
             nombre = producto.nombre,
-            precio = producto.precio,
-            imagenUrl = producto.imagenUrl,
-            cantidad = 1, // Por defecto 1, luego manejamos la lógica de sumar si ya existe en el ViewModel
             descripcion = producto.descripcion,
+            precio = producto.precio, // Pasamos Double a Double
             stock = producto.stock,
             categoria = producto.categoria,
+            imagenUrl = producto.imagenUrl,
             origen = producto.origen,
             unidad = producto.unidad,
-            databaseId = producto.databaseId
+            cantidad = 1
         )
-        // Ojo: Aquí la lógica simple es insertar.
-        // En el ViewModel manejaremos si se suma +1 o se crea nuevo.
-        // Pero como definimos en el DAO "OnConflictStrategy.REPLACE",
-        // necesitamos gestionar la cantidad actual antes de insertar si queremos sumar.
-        // Para simplificar, haremos la lógica de "verificar si existe" en el ViewModel
-        // y aquí solo guardamos lo que nos manden.
         cartDao.insertCartItem(itemEntity)
     }
 
-    // Función para guardar un item con cantidad específica (usada al sumar/restar)
     suspend fun updateCartItem(userId: Long, item: CartItem) {
         val entity = CartEntity(
             userId = userId,
             productId = item.producto.id,
+            databaseId = item.producto.databaseId,
             nombre = item.producto.nombre,
-            precio = item.producto.precio,
-            imagenUrl = item.producto.imagenUrl,
-            cantidad = item.cantidad,
             descripcion = item.producto.descripcion,
+            precio = item.producto.precio,
             stock = item.producto.stock,
             categoria = item.producto.categoria,
+            imagenUrl = item.producto.imagenUrl,
             origen = item.producto.origen,
             unidad = item.producto.unidad,
-            databaseId = item.producto.databaseId
+            cantidad = item.cantidad
         )
         cartDao.insertCartItem(entity)
     }

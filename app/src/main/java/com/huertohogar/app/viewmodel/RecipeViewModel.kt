@@ -10,11 +10,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * Estado completo de la pantalla de Recetas.
  * Agrupa tanto la lista de resultados (vitrina) como el detalle de una receta seleccionada.
- * Esto permite manejar toda la navegación y datos de esta sección en un solo lugar.
  */
 data class RecipeUiState(
     val recipes: List<RecipeDto> = emptyList(),       // Lista de resumen para la búsqueda
@@ -25,26 +26,25 @@ data class RecipeUiState(
 
 /**
  * ViewModel para el buscador de recetas.
- * Hereda de ViewModel estándar (no AndroidViewModel) porque no requiere Contexto.
+ * Incluye manejo robusto de errores de red y HTTP.
  */
 class RecipeViewModel : ViewModel() {
 
-    // Repositorio encargado de la comunicación con la API de recetas (ej. TheMealDB).
+    // Repositorio encargado de la comunicación con la API de recetas.
     private val repository = RecipeRepository()
 
     // Gestión de Estado UI reactivo.
     private val _uiState = MutableStateFlow(RecipeUiState())
     val uiState: StateFlow<RecipeUiState> = _uiState.asStateFlow()
 
-    // Carga inicial:
-    // Al abrir la pantalla, buscamos algo por defecto para que no aparezca vacía.
+    // Carga inicial al abrir la pantalla.
     init {
         searchRecipes("Chicken")
     }
 
     /**
      * Busca recetas generales por ingrediente.
-     * Actualiza la lista 'recipes' del estado para mostrar la vitrina.
+     * Maneja excepciones específicas para feedback preciso al usuario.
      */
     fun searchRecipes(ingredient: String) {
         viewModelScope.launch {
@@ -52,6 +52,7 @@ class RecipeViewModel : ViewModel() {
             _uiState.update { it.copy(isLoading = true, error = null, selectedRecipe = null) }
 
             try {
+                // Ahora repository.getRecipes lanzará excepciones si algo falla
                 val result = repository.getRecipes(ingredient)
                 _uiState.update {
                     it.copy(
@@ -59,11 +60,28 @@ class RecipeViewModel : ViewModel() {
                         isLoading = false
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
+                // Error de conexión (Sin internet, DNS, Timeout)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "Error al cargar recetas: ${e.message}"
+                        error = "Sin conexión a internet. Verifique su red."
+                    )
+                }
+            } catch (e: HttpException) {
+                // Error del servidor (404, 500, etc.)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Error del servidor (${e.code()}): ${e.message()}"
+                    )
+                }
+            } catch (e: Exception) {
+                // Error genérico
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Ocurrió un error inesperado al cargar recetas."
                     )
                 }
             }
@@ -71,12 +89,10 @@ class RecipeViewModel : ViewModel() {
     }
 
     /**
-     * Obtiene los datos extendidos de una receta específica (Instrucciones, medidas, etc.).
-     * Se invoca al hacer clic en una tarjeta de la lista.
+     * Obtiene los datos extendidos de una receta específica.
      */
     fun getRecipeDetail(id: String) {
         viewModelScope.launch {
-            // Mantenemos la lista de fondo visible, pero mostramos carga.
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
@@ -91,12 +107,29 @@ class RecipeViewModel : ViewModel() {
                     }
                 } else {
                     _uiState.update {
-                        it.copy(isLoading = false, error = "No se pudo cargar el detalle.")
+                        it.copy(isLoading = false, error = "No se pudo encontrar el detalle de la receta.")
                     }
+                }
+            } catch (e: IOException) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Sin conexión a internet."
+                    )
+                }
+            } catch (e: HttpException) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Error al obtener detalle (${e.code()})."
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(isLoading = false, error = "Error de conexión: ${e.message}")
+                    it.copy(
+                        isLoading = false,
+                        error = "Error inesperado: ${e.message}"
+                    )
                 }
             }
         }
@@ -104,8 +137,6 @@ class RecipeViewModel : ViewModel() {
 
     /**
      * Resetea la selección activa.
-     * Vital para la navegación: al volver de la pantalla de detalle a la lista,
-     * limpiamos el 'selectedRecipe' para evitar que se muestre brevemente al entrar a otra receta.
      */
     fun clearSelectedRecipe() {
         _uiState.update { it.copy(selectedRecipe = null) }

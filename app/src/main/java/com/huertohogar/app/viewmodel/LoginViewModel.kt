@@ -15,16 +15,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.VisibleForTesting
+import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * ViewModel para gestionar el inicio de sesión.
- * Hereda de AndroidViewModel porque necesitamos el "Contexto" (Application)
- * para poder guardar los datos de sesión en el móvil.
+ * Incluye manejo de errores específicos (IOException, HttpException).
  */
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     // Dependencias para guardar sesión y conectar a internet.
-    // Son 'var' y visibles para testing para poder sustituirlas por versiones falsas en las pruebas.
     @VisibleForTesting
     var sessionManager = SessionManager(application)
 
@@ -32,13 +32,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     var authRepository = AuthRepository()
 
     // Estado de la UI (StateFlow).
-    // _uiState es privado para modificarlo y uiState es público solo para lectura desde la Vista.
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     private val TAG = "LoginViewModel"
 
-    // Actualiza el email mientras el usuario escribe y limpia errores previos para mejorar la UX.
+    // Actualiza el email y limpia errores previos.
     fun onEmailChange(email: String) {
         _uiState.update { currentState ->
             currentState.copy(
@@ -50,7 +49,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Actualiza la contraseña y resetea cualquier error relacionado.
+    // Actualiza la contraseña y limpia errores previos.
     fun onPasswordChange(password: String) {
         _uiState.update { currentState ->
             currentState.copy(
@@ -62,15 +61,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Cambia el estado de visibilidad de la contraseña (ojo ver/ocultar).
+    // Cambia la visibilidad de la contraseña.
     fun onTogglePasswordVisibility() {
         _uiState.update { it.copy(passwordVisible = !it.passwordVisible) }
     }
 
     // Proceso principal de Login.
-    // 1. Valida datos locales.
-    // 2. Lanza una corrutina (hilo secundario) para conectar con la API.
-    // 3. Si es exitoso, guarda la sesión y navega. Si falla, muestra el error.
     fun onLoginClicked(onLoginSuccess: () -> Unit) {
         if (!validarFormularioLocal()) {
             return
@@ -100,29 +96,55 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(isLoading = false) }
                     onLoginSuccess()
                 } else {
+                    // Manejo de códigos de error específicos del servidor (400, 401, 500)
                     Log.e(TAG, "Error del servidor: ${response.code()} ${response.message()}")
+                    val mensajeError = when (response.code()) {
+                        401 -> "Credenciales incorrectas. Verifique email y contraseña."
+                        404 -> "Usuario no encontrado."
+                        500 -> "Error interno del servidor. Intente más tarde."
+                        else -> "Error en el inicio de sesión (${response.code()})."
+                    }
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            loginError = "Credenciales incorrectas o error en el servidor (${response.code()})."
+                            loginError = mensajeError
                         )
                     }
                 }
+            } catch (e: IOException) {
+                // Captura errores de conexión (sin internet, timeout)
+                Log.e(TAG, "Error de Red en Login", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loginError = "Sin conexión a internet. Compruebe su red."
+                    )
+                }
+            } catch (e: HttpException) {
+                // Captura errores lanzados por Retrofit/OkHttp
+                Log.e(TAG, "Error HTTP en Login", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loginError = "Error del servidor: ${e.message()}"
+                    )
+                }
             } catch (e: Exception) {
+                // Captura cualquier otro error no previsto (NPE, parseo, etc.)
                 Log.e(TAG, "Error CRÍTICO en Login", e)
                 e.printStackTrace()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        loginError = "Error de conexión: ${e.message}"
+                        loginError = "Ocurrió un error inesperado: ${e.message}"
                     )
                 }
             }
         }
     }
 
-    // Comprueba formato de email y campos vacíos antes de molestar al servidor.
-    // Devuelve true si todo está correcto.
+    // Validación local.
     private fun validarFormularioLocal(): Boolean {
         val state = _uiState.value
         val newErrors = LoginErrorState(
@@ -133,7 +155,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         return newErrors.email == null && newErrors.password == null
     }
 
-    // Helper simple con Regex para asegurar que parece un correo real.
     private fun isValidEmail(email: String): Boolean {
         val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$".toRegex()
         return email.isNotBlank() && email.matches(emailRegex)

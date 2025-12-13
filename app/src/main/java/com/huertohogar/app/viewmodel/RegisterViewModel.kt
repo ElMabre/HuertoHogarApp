@@ -13,15 +13,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * ViewModel para gestionar el registro de nuevos usuarios.
- * Hereda de AndroidViewModel para tener acceso al Contexto y guardar la sesión tras un registro exitoso.
+ * Incluye manejo robusto de excepciones de red y servidor.
  */
 class RegisterViewModel(application: Application) : AndroidViewModel(application) {
 
     // Dependencias necesarias para guardar datos locales y conectar a la API.
-    // Definidas como 'var' para permitir inyección de Mocks en tests.
     var sessionManager = SessionManager(application)
     var authRepository = AuthRepository()
 
@@ -33,9 +34,6 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     private val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
 
     // --- Actualización de campos del formulario ---
-
-    // Métodos para actualizar el estado conforme el usuario escribe.
-    // Además de guardar el valor, limpiamos el error específico de ese campo para mejorar la UX.
 
     fun onNombreChange(nombre: String) {
         _uiState.update { it.copy(nombre = nombre, errors = it.errors.copy(nombre = null)) }
@@ -50,7 +48,6 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onRegionSelected(region: String) {
-        // Al cambiar región, reseteamos comuna para mantener consistencia.
         _uiState.update { it.copy(region = region, comuna = "", errors = it.errors.copy(region = null)) }
     }
 
@@ -72,16 +69,14 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
 
     // --- Lógica de Registro ---
 
-    // Proceso principal: Valida -> Carga -> Llama a API -> Guarda Sesión.
     fun onRegisterClicked(onRegisterSuccess: () -> Unit) {
-        // Validación local primero para evitar llamadas innecesarias al servidor.
+        // Validación local primero.
         if (!validarFormulario()) return
 
         _uiState.update { it.copy(isLoading = true, registerErrorGlobal = null) }
 
         viewModelScope.launch {
             try {
-                // Preparamos el objeto DTO con los datos actuales del estado.
                 val currentState = _uiState.value
                 val request = RegisterRequestDto(
                     nombre = currentState.nombre,
@@ -104,26 +99,50 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
                     _uiState.update { it.copy(isLoading = false) }
                     onRegisterSuccess()
                 } else {
+                    // Manejo de errores específicos del servidor (ej. 409 Conflict)
+                    val errorMsg = when (response.code()) {
+                        409 -> "El correo electrónico ya está registrado."
+                        400 -> "Datos inválidos. Verifique el formulario."
+                        500 -> "Error interno del servidor."
+                        else -> "Error en el registro (${response.code()})."
+                    }
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            registerErrorGlobal = "Error en el registro. Verifique sus datos o intente más tarde."
+                            registerErrorGlobal = errorMsg
                         )
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
+                // Error de conectividad (Modo Avión, Sin datos, Timeout)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        registerErrorGlobal = "Error de conexión: ${e.message}"
+                        registerErrorGlobal = "Sin conexión a internet. Verifique su red."
+                    )
+                }
+            } catch (e: HttpException) {
+                // Error HTTP lanzado por Retrofit
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        registerErrorGlobal = "Error del servidor: ${e.message()}"
+                    )
+                }
+            } catch (e: Exception) {
+                // Error genérico inesperado
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        registerErrorGlobal = "Ocurrió un error inesperado: ${e.message}"
                     )
                 }
             }
         }
     }
 
-    // Comprueba reglas de negocio básicas (campos vacíos, longitud de contraseña).
-    // Actualiza el estado de errores para mostrar advertencias en rojo en la UI.
+    // Comprueba reglas de negocio básicas.
     private fun validarFormulario(): Boolean {
         val state = _uiState.value
 
@@ -142,7 +161,6 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
 
         _uiState.update { it.copy(errors = errors) }
 
-        // Retorna true solo si todos los campos de error son nulos.
         return errors.nombre == null && errors.apellido == null &&
                 errors.run == null && errors.region == null &&
                 errors.comuna == null && errors.direccion == null &&

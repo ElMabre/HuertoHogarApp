@@ -1,33 +1,25 @@
 package com.huertohogar.app.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.PrimaryKey
 
-/**
- * Entidad que representa un ítem del carrito en la base de datos local.
- * Usamos una clave primaria compuesta por userId y productId para que:
- * 1. Cada usuario tenga su propio carrito (separado por userId).
- * 2. Un mismo producto no se repita en la lista del mismo usuario (se agrupa).
- */
-@Entity(
-    tableName = "cart_items",
-    primaryKeys = ["userId", "productId"]
-)
+@Entity(tableName = "cart_items")
 data class CartEntity(
-    val userId: Long,       // ID del usuario logueado (SessionManager)
-    val productId: String,  // ID del producto (Backend)
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0, // ID interno de Room (autogenerado)
 
-    // Guardamos los detalles del producto para poder mostrar el carrito offline
-    // sin tener que consultar a la API de nuevo.
+    val userId: Long,
+    val productId: String, // ID del producto (String, ej: "prod01")
+    val databaseId: Long,  // ID numérico del producto original
+
     val nombre: String,
-    val precio: Double,
-    val imagenUrl: String,
-    val cantidad: Int,
-
-    // Campos adicionales necesarios para reconstruir el objeto Producto completo
     val descripcion: String,
+    val precio: Double,    // CORRECCIÓN: Debe ser Double, no String
     val stock: Int,
     val categoria: String,
-    val origen: String,
-    val unidad: String,
-    val databaseId: Long // ID numérico del backend
+    val imagenUrl: String,
+    val origen: String,    // Campo nuevo requerido
+    val unidad: String,    // Campo nuevo requerido
+
+    val cantidad: Int
 )
